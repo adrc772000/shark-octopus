@@ -146,7 +146,7 @@ muteBtn.onclick=()=>{muted=!muted;muteBtn.textContent=muted?'🔈':'🔊';ac()};
 /* ---------- estado ---------- */
 let state='title',level=1,score=0,party=0,T=0;
 let chests=[],mounds=[],enemies=[],gems=[],parts=[],texts=[],notes=[],boss=null;
-if(location.hash==='#boss')level=5;if(location.hash==='#truck')level=10;if(location.hash==='#snake')level=15;
+if(location.hash==='#boss')level=5;if(location.hash==='#truck')level=10;if(location.hash==='#snake')level=15;if(location.hash==='#meg')level=20;if(location.hash==='#squid')level=25;
 let shake=0;
 const shark={kind:'shark',x:330,y:330,vx:0,vy:0,r:46,face:1,dash:0,dashCd:0,stun:0,bite:0,t:0,maxV:5.8,acc:.65};
 const octo={kind:'octo',x:620,y:360,vx:0,vy:0,r:40,face:-1,stun:0,still:1,dancing:false,force:0,noteT:0,t:0,maxV:6,acc:.75};
@@ -166,8 +166,10 @@ function buildLevel(){
   boss=null;
   if(level%5===0){
     chests=[];mounds=[];enemies=[];gems=[];
-    const cyc=(level/5-1)%3;
+    const cyc=(level/5-1)%5;
     if(cyc===2){boss=makeSnake();return}
+    if(cyc===3){boss=makeMeg();return}
+    if(cyc===4){boss=makeSquid();return}
     boss=cyc===1
       ?{type:'truck',x:W-200,y:FLOOR,vx:-3,vy:0,air:false,jumpT:3,face:-1,hp:3,max:3,dizzy:0,inv:0,bumpCd:0,t:0,done:false,hint:true}
       :{type:'orca',x:W-220,y:H*.42,vx:-2,vy:0,face:-1,r:78,hp:3,max:3,dizzy:0,inv:0,bumpCd:0,t:0,tx:W/2,ty:H*.4,done:false,hint:true};
@@ -475,6 +477,8 @@ function drawOcto(p){
 function updateBoss(dt,f){
   if(boss.type==='truck')return updateTruck(dt,f);
   if(boss.type==='snake')return updateSnake(dt,f);
+  if(boss.type==='meg')return updateMeg(dt,f);
+  if(boss.type==='squid')return updateSquid(dt,f);
   const b=boss;b.t+=dt;b.inv=Math.max(0,b.inv-dt);b.dizzy=Math.max(0,b.dizzy-dt);b.bumpCd=Math.max(0,b.bumpCd-dt);
   if(b.done){b.y-=2.2*f;b.x+=b.face*1.5*f;return}
   if(octo.dancing&&dist(octo.x,octo.y,b.x,b.y)<330){if(b.dizzy<=0){say('Dizzy!',b.x,b.y-100,'#ffd23f',46);tone(300,.5,'sine',.12,500)}b.dizzy=Math.max(b.dizzy,4)}
@@ -541,7 +545,9 @@ function drawOrca(b){
 /* ---------- Mega Chomp Truck (boss on levels 10, 20, …) ---------- */
 const BOSS={
   orca:{name:'Captain Orca',intro:'Captain Orca is here!',d1:'Octopus: dance to make him dizzy!',d2:'Shark: CHOMP him while he is dizzy!',dance:'Octopus, dance next to the Orca!',hit:'He is dizzy! Shark, CHOMP him!'},
-  truck:{name:'Mega Chomp Truck',intro:'VROOM! The Mega Chomp Truck!',d1:'Octopus: dance so the truck stops!',d2:'Shark: CHOMP the truck when it stops!',dance:'Octopus, dance next to the truck!',hit:'It stopped! Shark, CHOMP it!'}
+  truck:{name:'Mega Chomp Truck',intro:'VROOM! The Mega Chomp Truck!',d1:'Octopus: dance so the truck stops!',d2:'Shark: CHOMP the truck when it stops!',dance:'Octopus, dance next to the truck!',hit:'It stopped! Shark, CHOMP it!'},
+  meg:{name:'Megalodon',intro:'Uh oh… the MEGALODON!',d1:'Octopus: dance a lullaby to make him sleepy!',d2:'Shark: CHOMP him while he snoozes!',dance:'Octopus, dance near the Megalodon!',hit:'He is sleepy! Shark, CHOMP him!'},
+  squid:{name:'Mega Squid',intro:'Woosh! The Mega Squid!',d1:'Octopus: dance so the squid dances too!',d2:'Shark: CHOMP it while it is dancing!',dance:'Octopus, dance near the squid!',hit:'It is dancing! Shark, CHOMP it!'}
 };
 function bossIntro(){const B=BOSS[boss.type];say(B.intro,W/2,H/2-60,'#ffd23f',60,2.5);say(B.d1,W/2,H/2+10,'#ffb3d6',36,3);say(B.d2,W/2,H/2+55,'#bfe0f5',36,3);if(boss.type==='truck')honk()}
 function honk(){tone(330,.25,'square',.08);tone(415,.25,'square',.08);tone(330,.25,'square',.08,0,.3);tone(415,.35,'square',.08,0,.3)}
@@ -716,6 +722,159 @@ function drawSnake(b){
   if(!b.done)for(let i=0;i<b.max;i++)heart(hx-(b.max-1)*20+i*40,hy-112,14,i<b.hp?'#ff5f7a':'rgba(255,255,255,.3)');
   else heart(hx,hy-75,18,'#ff5f7a');
 }
+/* ---------- Megalodon (boss on levels 20, 45, …) ---------- */
+function makeMeg(){return{type:'meg',x:W-240,y:H*.4,vx:-2,vy:0,face:-1,r:108,hp:4,max:4,dizzy:0,inv:0,bumpCd:0,t:0,tx:W/2,ty:H*.42,windup:0,charge:0,chargeT:4,done:false,hint:true}}
+function updateMeg(dt,f){
+  const b=boss;b.t+=dt;b.inv=Math.max(0,b.inv-dt);b.dizzy=Math.max(0,b.dizzy-dt);b.bumpCd=Math.max(0,b.bumpCd-dt);
+  if(b.done){b.y-=2*f;b.x+=b.face*1.8*f;return}
+  if(octo.dancing&&dist(octo.x,octo.y,b.x,b.y)<380){if(b.dizzy<=0){say('So sleepy…',b.x,b.y-140,'#ffd23f',46);tone(330,.8,'sine',.12,-180)}b.dizzy=Math.max(b.dizzy,4);b.windup=0;b.charge=0}
+  if(b.dizzy>0){b.vx*=Math.pow(.9,f);b.vy*=Math.pow(.9,f)}
+  else if(b.windup>0){
+    b.windup-=dt;b.vx*=Math.pow(.85,f);b.vy*=Math.pow(.85,f);
+    if(b.windup<=0){b.charge=1.3;const p=players[(Math.random()*2)|0];b.face=p.x>b.x?1:-1;b.ty=Math.max(170,Math.min(FLOOR-100,p.y));noise(.3,.3,300)}
+  }else if(b.charge>0){
+    b.charge-=dt;b.vx=b.face*12;b.vy+=(Math.sign(b.ty-b.y)*2-b.vy)*.08*f;
+    if(Math.random()<.6)parts.push({x:b.x-b.face*120,y:b.y+rand(-30,30),vx:-b.vx*.08,vy:rand(-1,0),life:.6,max:.6,type:'bubble',c:'#dff6ff',size:rand(4,9)});
+    if((b.x<=b.r+4&&b.face<0)||(b.x>=W-b.r-4&&b.face>0)){b.charge=0;b.vx*=-.3;shake=.3;say('BONK!',b.x,b.y-130,'#bfe0f5',44);noise(.25,.3,200)}
+  }else{
+    b.chargeT-=dt;
+    if(b.chargeT<=0){b.chargeT=rand(3.5,5.5);b.windup=.85;say('CHAAARGE!',b.x,b.y-140,'#ff8a6e',42);tone(110,.5,'sawtooth',.1,80)}
+    if(dist(b.x,b.y,b.tx,b.ty)<70||Math.random()<.004){b.tx=rand(b.r+40,W-b.r-40);b.ty=rand(170,FLOOR-110)}
+    const ex=b.tx-b.x,ey=b.ty-b.y,d=Math.hypot(ex,ey)||1,sp=Math.min(3.4,2+level*.05);
+    b.vx+=(ex/d*sp-b.vx)*.03*f;b.vy+=(ey/d*sp-b.vy)*.03*f;
+  }
+  b.x+=b.vx*f;b.y+=b.vy*f;
+  b.x=Math.max(b.r,Math.min(W-b.r,b.x));b.y=Math.max(170,Math.min(FLOOR-95,b.y));
+  if(b.charge<=0&&Math.abs(b.vx)>.4)b.face=Math.sign(b.vx);
+  if(dist(shark.x,shark.y,b.x,b.y)<b.r+shark.r*.6){
+    if(b.dizzy>0&&b.inv<=0){
+      b.hp--;b.inv=.9;b.hint=false;shark.bite=.35;sfx.chomp();say('CHOMP!',b.x,b.y-110,'#fff',56);shake=.2;
+      burst(b.x,b.y,22,'bubble',['#dff6ff','#bfe9ff']);spawnGems(b.x,b.y-20,2);
+      const a=Math.atan2(b.y-shark.y,b.x-shark.x);b.vx=Math.cos(a)*5;b.vy=Math.sin(a)*5;
+      if(b.hp<=0){b.done=true;b.dizzy=0;sfx.win();say('The Megalodon is your friend now!',W/2,H/2-40,'#ffd23f',50,3);spawnGems(b.x,b.y,10,true);spawnGems(b.x,b.y,0,true);burst(b.x,b.y,40,'confetti',GEMC)}
+    }else if(b.dizzy<=0&&b.bumpCd<=0){
+      const a=Math.atan2(shark.y-b.y,shark.x-b.x);shark.vx=Math.cos(a)*9;shark.vy=Math.sin(a)*9;b.bumpCd=.8;
+      say('Whoa!',shark.x,shark.y-60,'#bfe0f5',36);tone(180,.3,'sine',.15,220);
+    }
+  }
+  if(b.dizzy<=0&&octo.stun<=0&&!octo.dancing&&dist(octo.x,octo.y,b.x,b.y)<b.r+octo.r*.6){
+    const a=Math.atan2(octo.y-b.y,octo.x-b.x);octo.vx=Math.cos(a)*9;octo.vy=Math.sin(a)*9;octo.stun=.8;
+    sfx.ouch();say('Oops!',octo.x,octo.y-60,'#ffb3d6',38);
+  }
+}
+function drawMeg(b){
+  const slp=b.dizzy>0&&!b.done;
+  ctx.save();ctx.translate(b.x,b.y+Math.sin(b.t*1.6)*5);
+  if(b.inv>0&&Math.floor(b.inv*12)%2)ctx.globalAlpha=.5;
+  const rot=slp?Math.sin(b.t*2)*.08:Math.max(-.25,Math.min(.25,b.vy*.04));
+  ctx.scale(b.face,1);ctx.rotate(rot);
+  const body='#5d7287',fin='#46586b',belly='#cdd9e1';
+  const wag=Math.sin(b.t*(b.charge>0?26:(slp?3:7)))*.3;
+  ctx.save();ctx.translate(-120,0);ctx.rotate(wag);ctx.fillStyle=fin;ctx.beginPath();ctx.moveTo(18,0);ctx.lineTo(-62,-58);ctx.quadraticCurveTo(-40,0,-62,58);ctx.closePath();ctx.fill();ctx.restore();
+  ctx.fillStyle=fin;ctx.beginPath();ctx.moveTo(-42,-52);ctx.quadraticCurveTo(-24,-132,18,-118);ctx.quadraticCurveTo(2,-84,22,-48);ctx.fill();
+  ell(0,0,130,64,body);
+  ctx.fillStyle=belly;ctx.beginPath();ctx.ellipse(16,16,102,40,0,0,Math.PI);ctx.fill();
+  ctx.fillStyle=fin;ctx.beginPath();ctx.moveTo(-2,24);ctx.quadraticCurveTo(-14,80,-52,88);ctx.quadraticCurveTo(-24,52,-30,20);ctx.fill();
+  ctx.strokeStyle=fin;ctx.lineWidth=5;for(let i=0;i<3;i++){ctx.beginPath();ctx.moveTo(30+i*13,-24);ctx.quadraticCurveTo(23+i*13,-2,30+i*13,18);ctx.stroke()}
+  // old pirate scars
+  ctx.strokeStyle='#3a4a5a';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(-50,-40);ctx.lineTo(-28,-20);ctx.moveTo(-46,-24);ctx.lineTo(-34,-36);ctx.stroke();
+  const open=b.windup>0||b.charge>0;
+  if(open){
+    ctx.fillStyle='#7a1f33';ctx.beginPath();ctx.moveTo(130,-12);ctx.lineTo(56,12);ctx.lineTo(130,48);ctx.closePath();ctx.fill();
+    ctx.fillStyle='#fff';for(let i=0;i<4;i++){ctx.beginPath();ctx.moveTo(72+i*15,6-i*4);ctx.lineTo(79+i*15,18-i*4);ctx.lineTo(86+i*15,4-i*4);ctx.fill()}
+  }else{
+    ctx.strokeStyle='#2a3a4a';ctx.lineWidth=4.5;ctx.beginPath();
+    if(b.done){ctx.moveTo(128,10);ctx.quadraticCurveTo(104,36,74,20)}else if(slp){ctx.moveTo(126,14);ctx.quadraticCurveTo(108,8,98,16);ctx.quadraticCurveTo(88,24,78,16)}else{ctx.moveTo(128,8);ctx.lineTo(70,20)}
+    ctx.stroke();
+    ctx.fillStyle='#fff';for(let i=0;i<5;i++){ctx.beginPath();ctx.moveTo(76+i*11,20-i*2.2);ctx.lineTo(81+i*11,28-i*2.8);ctx.lineTo(86+i*11,19-i*2.4);ctx.fill()}
+  }
+  // heavy brow eye
+  if(b.done){ctx.strokeStyle='#2a3a4a';ctx.lineWidth=5;ctx.beginPath();ctx.arc(70,-22,9,Math.PI*1.1,Math.PI*1.9);ctx.stroke()}
+  else if(slp){ctx.strokeStyle='#2a3a4a';ctx.lineWidth=5;ctx.beginPath();ctx.arc(70,-20,10,Math.PI*.1,Math.PI*.9);ctx.stroke()}
+  else{ell(70,-22,11,11,'#fff');ell(73,-22,6,6,'#13202c');ell(75,-25,2,2,'#fff');
+    ctx.strokeStyle='#2a3a4a';ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(48,-42);ctx.lineTo(84,-30);ctx.stroke()}
+  ctx.restore();
+  if(slp)for(let i=0;i<3;i++){const k=(b.t*.8+i*.33)%1;hudText('Z',b.x+b.face*60+i*16+Math.sin(b.t*2+i)*8,b.y-100-k*38,26+i*7,'rgba(255,248,231,'+(1-k)+')','center')}
+  if(!b.done)for(let i=0;i<b.max;i++)heart(b.x-(b.max-1)*20+i*40,b.y-160,14,i<b.hp?'#ff5f7a':'rgba(255,255,255,.3)');
+  else heart(b.x,b.y-140,18,'#ff5f7a');
+}
+
+/* ---------- Mega Squid (boss on levels 25, 50, …) ---------- */
+function makeSquid(){return{type:'squid',x:W-220,y:H*.38,vx:-2,vy:0,face:-1,r:88,hp:3,max:3,dizzy:0,inv:0,bumpCd:0,t:0,tx:W/2,ty:H*.4,jetT:1.2,inkT:3,done:false,hint:true}}
+function updateSquid(dt,f){
+  const b=boss;b.t+=dt;b.inv=Math.max(0,b.inv-dt);b.dizzy=Math.max(0,b.dizzy-dt);b.bumpCd=Math.max(0,b.bumpCd-dt);b.inkT=Math.max(0,b.inkT-dt);
+  if(b.done){b.y-=2.2*f;b.x+=b.face*1.2*f;return}
+  if(octo.dancing&&dist(octo.x,octo.y,b.x,b.y)<360){if(b.dizzy<=0){say('It loves the dance!',b.x,b.y-180,'#ffd23f',44);sfx.note();sfx.note()}b.dizzy=Math.max(b.dizzy,4)}
+  if(b.dizzy>0){b.vx*=Math.pow(.92,f);b.vy*=Math.pow(.92,f);
+    if(Math.random()<.04)notes.push({x:b.x+rand(-60,60),y:b.y-120,vx:rand(-.6,.6),life:1.4,s:Math.random()<.5?'♪':'♫',c:['#ffd23f','#fff8e7','#7ff0d6','#ffb3d6'][(Math.random()*4)|0]});
+  }else{
+    b.jetT-=dt;
+    if(b.jetT<=0){b.jetT=rand(1.3,2.1);
+      if(dist(b.x,b.y,b.tx,b.ty)<90||Math.random()<.35){b.tx=rand(110,W-110);b.ty=rand(180,FLOOR-150)}
+      const a=Math.atan2(b.ty-b.y,b.tx-b.x);b.vx=Math.cos(a)*6.5;b.vy=Math.sin(a)*6.5;
+      noise(.18,.14,900);burst(b.x,b.y+70,8,'bubble',['#dff6ff','#bfe9ff']);
+    }
+    b.vx*=Math.pow(.955,f);b.vy*=Math.pow(.955,f);
+    if(b.inkT<=0&&dist(shark.x,shark.y,b.x,b.y)<270){b.inkT=3.5;say('Splurt!',b.x,b.y-170,'#c9b6ff',40);burst(b.x,b.y+30,28,'ink',['#3b2a4d','#59406f','#2a1f3d']);noise(.3,.25,500)}
+  }
+  b.x+=b.vx*f;b.y+=b.vy*f;
+  b.x=Math.max(90,Math.min(W-90,b.x));b.y=Math.max(180,Math.min(FLOOR-130,b.y));
+  if(Math.abs(b.vx)>.4)b.face=Math.sign(b.vx);
+  if(dist(shark.x,shark.y,b.x,b.y)<b.r+shark.r*.6){
+    if(b.dizzy>0&&b.inv<=0){
+      b.hp--;b.inv=.9;b.hint=false;shark.bite=.35;sfx.chomp();say('CHOMP!',b.x,b.y-110,'#fff',56);
+      burst(b.x,b.y,20,'bubble',['#dff6ff','#bfe9ff']);spawnGems(b.x,b.y-20,2);
+      const a=Math.atan2(b.y-shark.y,b.x-shark.x);b.vx=Math.cos(a)*6;b.vy=Math.sin(a)*6;
+      if(b.hp<=0){b.done=true;b.dizzy=0;sfx.win();say('The squid is your friend now!',W/2,H/2-40,'#ffd23f',50,3);spawnGems(b.x,b.y,10,true);spawnGems(b.x,b.y,0,true);burst(b.x,b.y,40,'confetti',GEMC)}
+    }else if(b.dizzy<=0&&b.bumpCd<=0){
+      const a=Math.atan2(shark.y-b.y,shark.x-b.x);shark.vx=Math.cos(a)*8;shark.vy=Math.sin(a)*8;b.bumpCd=.8;
+      say('Boing!',shark.x,shark.y-60,'#bfe0f5',36);tone(240,.3,'sine',.14,260);
+    }
+  }
+  if(b.dizzy<=0&&octo.stun<=0&&!octo.dancing&&dist(octo.x,octo.y,b.x,b.y)<b.r+octo.r*.6){
+    const a=Math.atan2(octo.y-b.y,octo.x-b.x);octo.vx=Math.cos(a)*9;octo.vy=Math.sin(a)*9;octo.stun=.8;
+    sfx.ouch();say('Oops!',octo.x,octo.y-60,'#ffb3d6',38);
+  }
+}
+function drawSquid(b){
+  const dz=b.dizzy>0&&!b.done;
+  ctx.save();ctx.translate(b.x,b.y+(dz?-Math.abs(Math.sin(b.t*7))*14:Math.sin(b.t*2)*5));
+  if(b.inv>0&&Math.floor(b.inv*12)%2)ctx.globalAlpha=.55;
+  const rot=dz?Math.sin(b.t*7)*.22:Math.max(-.3,Math.min(.3,b.vx*.04));
+  ctx.rotate(rot);
+  const MAIN='#ff6f61',DARK='#d84b3e',LIGHT='#ffb3a0';
+  ctx.lineCap='round';
+  // two long catch-tentacles
+  for(const s of[-1,1]){const ph=b.t*(dz?8:2.5)+s*2;
+    ctx.strokeStyle=LIGHT;ctx.lineWidth=10;ctx.beginPath();ctx.moveTo(s*40,44);
+    ctx.quadraticCurveTo(s*(84+Math.sin(ph+1)*14),110,s*(66+Math.sin(ph)*(dz?34:16)),170+Math.cos(ph)*12);ctx.stroke();
+    ell(s*(66+Math.sin(ph)*(dz?34:16)),170+Math.cos(ph)*12,11,15,LIGHT)}
+  // eight waving arms
+  for(let i=0;i<8;i++){const bx=-42+i*12,ph=b.t*(dz?9:3.5)+i,amp=dz?24:10;
+    ctx.strokeStyle=i%2?DARK:MAIN;ctx.lineWidth=14;ctx.beginPath();ctx.moveTo(bx,46);
+    ctx.quadraticCurveTo(bx*1.2+Math.sin(ph+1)*amp,88,bx*1.5+Math.sin(ph)*amp,118+Math.cos(ph)*9);ctx.stroke();
+    ctx.fillStyle='#ffd0c4';ctx.beginPath();ctx.arc(bx*1.5+Math.sin(ph)*amp,118+Math.cos(ph)*9,4,0,Math.PI*2);ctx.fill()}
+  // pointy mantle
+  const g=ctx.createRadialGradient(-16,-50,10,0,-30,130);g.addColorStop(0,'#ff9a85');g.addColorStop(1,MAIN);
+  ctx.fillStyle=g;ctx.beginPath();ctx.moveTo(0,-142);ctx.quadraticCurveTo(58,-72,55,8);ctx.quadraticCurveTo(42,54,0,58);ctx.quadraticCurveTo(-42,54,-55,8);ctx.quadraticCurveTo(-58,-72,0,-142);ctx.fill();
+  // side fins near the tip
+  ctx.fillStyle=DARK;for(const s of[-1,1]){ctx.beginPath();ctx.moveTo(s*8,-112);ctx.quadraticCurveTo(s*(76+Math.sin(b.t*4)*8),-126,s*58,-62);ctx.quadraticCurveTo(s*28,-76,s*8,-74);ctx.closePath();ctx.fill()}
+  // freckle spots
+  ctx.fillStyle='rgba(255,255,255,.28)';for(const [sx,sy,sr] of[[-22,-66,6],[16,-86,5],[-8,-36,7],[26,-40,5],[-30,-16,5]]){ctx.beginPath();ctx.arc(sx,sy,sr,0,Math.PI*2);ctx.fill()}
+  // big friendly eyes
+  const lx=b.face*3;
+  if(b.done){ctx.strokeStyle='#5a1420';ctx.lineWidth=5;for(const s of[-20,20]){ctx.beginPath();ctx.arc(s,6,9,Math.PI*1.1,Math.PI*1.9);ctx.stroke()}}
+  else if(dz){ctx.strokeStyle='#5a1420';ctx.lineWidth=5;for(const s of[-20,20]){ctx.beginPath();ctx.arc(s,6,9,Math.PI*1.1,Math.PI*1.9);ctx.stroke()}
+    ell(-34,20,7,4,'rgba(255,90,140,.6)');ell(34,20,7,4,'rgba(255,90,140,.6)')}
+  else{for(const s of[-20,20]){ell(s,6,14,15,'#fff');ell(s+lx,7,7,8,'#3a0f1c');ell(s+lx+2,3,2.4,2.4,'#fff')}}
+  // mouth
+  if(dz||b.done){ctx.fillStyle='#7a1f33';ctx.beginPath();ctx.ellipse(0,30,9,7,0,0,Math.PI);ctx.fill()}
+  else{ctx.strokeStyle='#7a1f33';ctx.lineWidth=4;ctx.beginPath();ctx.arc(0,26,8,.2,Math.PI-.2);ctx.stroke()}
+  ctx.restore();
+  if(dz)for(let i=0;i<3;i++){const a=b.t*4+i*2.1;ctx.fillStyle='#ffd23f';star(b.x+Math.cos(a)*70,b.y-150+Math.sin(a)*14,11,4.5)}
+  if(!b.done)for(let i=0;i<b.max;i++)heart(b.x-(b.max-1)*20+i*40,b.y-195,14,i<b.hp?'#ff5f7a':'rgba(255,255,255,.3)');
+  else heart(b.x,b.y-170,18,'#ff5f7a');
+}
 function hudText(s,x,y,size,color,align='left'){ctx.font='800 '+Math.round(size)+'px '+CFONT;ctx.textAlign=align;ctx.textBaseline='middle';ctx.lineWidth=size/6;ctx.strokeStyle='#05213a';ctx.lineJoin='round';ctx.strokeText(s,x,y);ctx.fillStyle=color;ctx.fillText(s,x,y)}
 let FONT='';
 function drawHUD(){
@@ -737,7 +896,7 @@ function draw(){
   ctx.save();ctx.beginPath();ctx.rect(0,0,W,H);ctx.clip();
   if(shake>0)ctx.translate(Math.sin(T*90)*shake*14,Math.cos(T*70)*shake*10);
   drawBG();
-  mounds.forEach(drawMound);chests.forEach(drawChest);gems.forEach(drawGem);enemies.forEach(drawEnemy);if(boss)({truck:drawTruck,orca:drawOrca,snake:drawSnake})[boss.type](boss);
+  mounds.forEach(drawMound);chests.forEach(drawChest);gems.forEach(drawGem);enemies.forEach(drawEnemy);if(boss)({truck:drawTruck,orca:drawOrca,snake:drawSnake,meg:drawMeg,squid:drawSquid})[boss.type](boss);
   [shark,octo].sort((a,b)=>a.y-b.y).forEach(p=>p===shark?drawShark(p):drawOcto(p));
   for(const p of parts){const a=Math.max(0,p.life/p.max);ctx.globalAlpha=Math.min(1,a*1.5);
     if(p.type==='bubble'){ctx.strokeStyle=p.c;ctx.lineWidth=2;ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,Math.PI*2);ctx.stroke()}
