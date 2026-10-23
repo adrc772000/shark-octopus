@@ -107,7 +107,16 @@ const dist=(a,b,x,y)=>Math.hypot(a-x,b-y);
 
 /* ---------- sonido ---------- */
 let AC=null,muted=false;
-function ac(){if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(AC&&AC.state==='suspended')AC.resume();return AC}
+function ac(){
+  // iPhone: play even with the silent switch on (iOS 17+), and unlock audio inside the tap
+  try{if(navigator.audioSession&&navigator.audioSession.type!=='playback')navigator.audioSession.type='playback'}catch(_){}
+  if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}
+    if(AC){try{const b=AC.createBuffer(1,1,22050),s=AC.createBufferSource();s.buffer=b;s.connect(AC.destination);s.start(0)}catch(_){}}}
+  if(AC&&AC.state!=='running'){try{const r=AC.resume();r&&r.catch&&r.catch(()=>{})}catch(_){}}
+  return AC}
+// iPhone only unlocks sound during a real tap; also wake it up after switching apps
+['touchend','pointerup','click'].forEach(ev=>document.addEventListener(ev,()=>{if(state==='play'||ev!=='pointerup')ac()},{passive:true}));
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&AC)ac()});
 function tone(f,d,type='sine',vol=.15,slide=0,delay=0){
   if(!AC||muted)return;const t=AC.currentTime+delay;const o=AC.createOscillator(),g=AC.createGain();
   o.type=type;o.frequency.setValueAtTime(f,t);if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(40,f+slide),t+d);
