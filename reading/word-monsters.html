@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en-NZ">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Reading Games">
+<meta name="theme-color" content="#06243a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Word Monsters</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@700&family=Lilita+One&display=swap">
+<style>
+/* Layout: one-screen arcade. Top bar (buddy + score), arena scene, three huge word cards. Single committed deep-sea night look. */
+:root{
+  --sea:#0b2a3c; --sea2:#0f3d55; --sand:#f2c14e; --lime:#8be04e; --coral:#ff6b4a; --foam:#f4fbff; --ink:#0a1c27;
+  --display:"Lilita One","Arial Rounded MT Bold",system-ui,sans-serif;
+  --read:"Andika","Comic Sans MS",system-ui,sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:radial-gradient(120% 80% at 50% 0%,var(--sea2),var(--sea) 70%);color:var(--foam);font-family:var(--display);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));overflow-x:hidden;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation;overscroll-behavior:none}
+button,select{touch-action:manipulation}
+.wrap{max-width:820px;margin:0 auto;padding-block:16px;display:flex;flex-direction:column;gap:14px;min-height:100%;box-sizing:border-box}
+button{font:inherit;cursor:pointer;border:0}
+button:focus-visible{outline:4px solid var(--sand);outline-offset:3px}
+h1{margin:0;font-size:clamp(34px,7vw,56px);letter-spacing:1px;text-wrap:balance;color:var(--sand);text-shadow:0 4px 0 var(--ink)}
+.sub{font-family:var(--read);font-size:18px;opacity:.85;margin:0}
+/* start screen */
+.pick{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.buddy{background:var(--foam);color:var(--ink);border-radius:22px;padding:14px;display:flex;flex-direction:column;align-items:center;gap:6px;box-shadow:0 6px 0 var(--ink);transition:transform .15s}
+.buddy:hover{transform:translateY(-3px)}
+.buddy:active{transform:translateY(3px);box-shadow:0 3px 0 var(--ink)}
+.buddy svg{width:100%;max-width:200px;height:110px}
+.buddy b{font-size:26px}
+.buddy span{font-family:var(--read);font-size:15px;opacity:.7}
+.modes{display:flex;gap:10px;flex-wrap:wrap}
+.chip{background:transparent;color:var(--foam);border:3px solid var(--foam);border-radius:99px;padding:8px 16px;font-size:18px}
+.chip[aria-pressed="true"]{background:var(--sand);border-color:var(--sand);color:var(--ink)}
+.words{font-family:var(--read);font-size:15px;opacity:.75;line-height:1.6}
+/* game */
+.bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.home{background:var(--foam);color:var(--ink);border-radius:14px;padding:8px 14px;font-size:18px}
+.track{flex:1;min-width:140px;height:22px;background:rgba(255,255,255,.15);border-radius:99px;overflow:hidden}
+.fill{height:100%;width:0;background:var(--lime);border-radius:99px;transition:width .4s}
+.score{font-size:22px;color:var(--sand);font-variant-numeric:tabular-nums}
+.arena{position:relative;height:190px;border-radius:24px;overflow:hidden;background:linear-gradient(var(--sea2),#124a63)}
+.arena.land{background:linear-gradient(#5aa9d6 0 62%,#7a4a2a 62%)}
+.arena.jungle{background:linear-gradient(#1f5a33 0 70%,#3e2a17 70%)}
+.arena svg.hero{position:absolute;left:4%;bottom:10px;height:150px;transition:transform .5s}
+.prey{position:absolute;right:6%;bottom:16px;height:70px;transition:opacity .3s,transform .3s}
+.prompt{display:flex;align-items:center;gap:14px;justify-content:center;flex-wrap:wrap}
+.say{background:var(--sand);color:var(--ink);border-radius:99px;padding:14px 26px;font-size:26px;box-shadow:0 5px 0 var(--ink)}
+.say:active{transform:translateY(3px);box-shadow:0 2px 0 var(--ink)}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.card{background:var(--foam);color:var(--ink);border-radius:22px;padding:22px 6px;font-family:var(--read);font-weight:700;font-size:clamp(40px,11vw,72px);line-height:1;box-shadow:0 7px 0 var(--ink);min-width:0;transition:transform .12s}
+.card:active{transform:translateY(4px);box-shadow:0 3px 0 var(--ink)}
+.card.good{background:var(--lime)}
+.card.nope{opacity:.25;animation:wob .4s}
+.flash{background:var(--foam);color:var(--ink);border-radius:26px;text-align:center;font-family:var(--read);font-weight:700;font-size:clamp(80px,26vw,170px);padding:20px 0;box-shadow:0 8px 0 var(--ink)}
+.judge{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.judge button{border-radius:20px;padding:18px;font-size:26px;color:var(--ink);box-shadow:0 6px 0 var(--ink)}
+.yes{background:var(--lime)} .again{background:var(--coral)}
+.hint{font-family:var(--read);text-align:center;opacity:.8;margin:0;font-size:16px}
+.win{text-align:center;display:flex;flex-direction:column;gap:14px;align-items:center}
+.win .big{font-size:clamp(40px,9vw,70px);color:var(--sand)}
+.tricky{font-family:var(--read);font-size:22px}
+.go{background:var(--lime);color:var(--ink);border-radius:20px;padding:14px 28px;font-size:26px;box-shadow:0 6px 0 var(--ink)}
+@keyframes wob{25%{transform:rotate(-6deg)}75%{transform:rotate(6deg)}}
+@keyframes jump{40%{transform:translate(45%,-40px) rotate(-8deg)}100%{transform:translate(0,0)}}
+@keyframes lunge{50%{transform:translateX(52%) scale(1.12)}100%{transform:none}}
+.hero.act-truck{animation:jump .7s ease-in-out}
+.hero.act-shark,.hero.act-snake{animation:lunge .7s ease-in-out}
+.prey.gone{opacity:0;transform:scale(.2) rotate(40deg)}
+.bubbles span{position:absolute;bottom:-20px;width:10px;height:10px;border-radius:50%;border:2px solid rgba(255,255,255,.4);animation:up 6s linear infinite}
+@keyframes up{to{transform:translateY(-240px)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:440px){.cards{gap:8px}.card{padding:18px 2px}.arena{height:160px}.arena svg.hero{height:120px}}
+.vpick{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-family:var(--read);font-size:17px}
+.vpick select{font-family:var(--read);font-size:16px;padding:8px 10px;border-radius:12px;border:3px solid var(--foam);background:var(--ink);color:var(--foam);max-width:100%;min-width:0}
+.vnote{font-family:var(--read);font-size:14px;opacity:.8;margin:0}
+.allgames{color:var(--foam);font-family:var(--read);font-size:17px;text-decoration:underline;align-self:flex-start}
+</style>
+</head>
+<body>
+
+
+<div class="wrap" id="app"></div>
+
+<script>
+const WORDS=["The","the","I","My","my","Is","is","was","Was","he","He","a","has","as","we","We","she","She","to","do","Do","his","too","see","so","It","are","of","said","have"];
+const NEED=10;
+
+const ART={
+ truck:`<svg class="hero" viewBox="0 0 220 150" aria-hidden="true"><rect x="40" y="40" width="130" height="45" rx="10" fill="#ff6b4a"/><rect x="95" y="14" width="60" height="34" rx="8" fill="#ff6b4a"/><rect x="104" y="20" width="42" height="20" rx="4" fill="#bfe8ff"/><path d="M40 55h-10v15h10z" fill="#f2c14e"/><circle cx="62" cy="110" r="34" fill="#1b1b1b"/><circle cx="62" cy="110" r="14" fill="#8a8a8a"/><circle cx="160" cy="110" r="34" fill="#1b1b1b"/><circle cx="160" cy="110" r="14" fill="#8a8a8a"/><path d="M50 50l20 0-10 25z" fill="#f2c14e"/></svg>`,
+ shark:`<svg class="hero" viewBox="0 0 240 150" aria-hidden="true"><path d="M10 80 Q60 30 150 45 Q205 55 230 85 Q200 115 140 118 Q60 122 10 80Z" fill="#6f8fa3"/><path d="M110 46 L130 2 L150 48Z" fill="#6f8fa3"/><path d="M14 80 L-6 45 L4 80 L-6 118Z" fill="#6f8fa3"/><path d="M60 110 Q140 130 225 88 Q200 106 140 112 Q90 115 60 110Z" fill="#e8eef2"/><circle cx="196" cy="72" r="6" fill="#0a1c27"/><path d="M170 95 Q200 108 226 88 L222 99 Q198 116 168 102Z" fill="#7a1f1f"/><path d="M174 97l6 6 6-5 6 6 6-6 6 5 6-6" stroke="#fff" stroke-width="3" fill="none"/><path d="M95 85 L110 105 L120 85Z" fill="#5a7787"/></svg>`,
+ snake:`<svg class="hero" viewBox="0 0 240 150" aria-hidden="true"><path id="body" d="M10 120 Q40 80 70 120 T130 120 T190 100" stroke="#4f7d2a" stroke-width="26" fill="none" stroke-linecap="round"/><path d="M10 120 Q40 80 70 120 T130 120 T190 100" stroke="#2c4a15" stroke-width="26" stroke-dasharray="6 16" fill="none" stroke-linecap="round"/><ellipse cx="200" cy="92" rx="30" ry="20" fill="#4f7d2a"/><circle cx="210" cy="84" r="5" fill="#f2c14e"/><circle cx="211" cy="84" r="2" fill="#0a1c27"/><path d="M228 96 l14 -2 m-14 2 l14 6" stroke="#ff6b4a" stroke-width="3"/></svg>`
+};
+const PREY={
+ truck:`<svg class="prey" viewBox="0 0 100 60" aria-hidden="true"><rect x="5" y="22" width="90" height="24" rx="6" fill="#3d7fd6"/><rect x="25" y="8" width="45" height="20" rx="6" fill="#3d7fd6"/><rect x="31" y="12" width="33" height="12" rx="3" fill="#bfe8ff"/><circle cx="25" cy="48" r="10" fill="#1b1b1b"/><circle cx="75" cy="48" r="10" fill="#1b1b1b"/></svg>`,
+ shark:`<svg class="prey" viewBox="0 0 100 60" aria-hidden="true"><ellipse cx="45" cy="30" rx="35" ry="18" fill="#f2c14e"/><path d="M78 30 L98 12 L98 48Z" fill="#f2c14e"/><circle cx="25" cy="25" r="4" fill="#0a1c27"/></svg>`,
+ snake:`<svg class="prey" viewBox="0 0 100 60" aria-hidden="true"><ellipse cx="50" cy="38" rx="32" ry="18" fill="#c9a27a"/><circle cx="78" cy="26" r="12" fill="#c9a27a"/><circle cx="82" cy="23" r="2.5" fill="#0a1c27"/><path d="M18 36 q-14 -4 -14 10" stroke="#c9a27a" stroke-width="4" fill="none"/></svg>`
+};
+const BUDDY={
+ truck:{name:"Monster Truck",verb:"cars crushed",scene:"land",blurb:"Smash the cars!"},
+ shark:{name:"Megalodon",verb:"fish gobbled",scene:"",blurb:"Chomp the fish!"},
+ snake:{name:"Anaconda",verb:"snacks swallowed",scene:"jungle",blurb:"Grow super long!"}
+};
+
+let S={buddy:"shark",mode:"hear",score:0,target:null,miss:{},tries:0,round:[]};
+try{Object.assign(S,JSON.parse(localStorage.getItem("wm")||"{}"),{score:0,target:null,round:[]})}catch(e){}
+function save(){try{localStorage.setItem("wm",JSON.stringify({buddy:S.buddy,mode:S.mode,miss:S.miss}))}catch(e){}}
+
+const app=document.getElementById("app");
+let voice=null,voices=[],vsig="";
+const nz=l=>(l||"").replace("_","-").toLowerCase();
+const vkey=v=>v.name+"|"+v.lang;
+function rank(v){const l=nz(v.lang),n=v.name.toLowerCase();if(l==="en-nz"||n.includes("new zealand"))return 0;if(l==="en-au")return 1;if(l==="en-gb")return 2;return 3}
+function pickVoice(){try{
+  const list=speechSynthesis.getVoices().filter(v=>nz(v.lang).startsWith("en")).sort((a,b)=>rank(a)-rank(b));
+  const sig=list.map(vkey).join(",");if(sig===vsig&&voices.length)return;
+  vsig=sig;voices=list;
+  let saved=null;try{saved=localStorage.getItem("voiceKey")}catch(e){}
+  const keep=voice&&voices.find(v=>vkey(v)===vkey(voice));
+  voice=keep||voices.find(v=>vkey(v)===saved)||voices[0]||null;fillVoices();
+}catch(e){}}
+function fillVoices(){const s=document.getElementById("vsel");if(!s||document.activeElement===s)return;
+  s.innerHTML=voices.length?voices.map((v,i)=>`<option value="${i}"${voice&&vkey(v)===vkey(voice)?" selected":""}>${rank(v)===0?"🇳🇿 ":rank(v)===1?"🇦🇺 ":rank(v)===2?"🇬🇧 ":""}${v.name} (${v.lang})</option>`).join(""):`<option>New Zealand English (device default)</option>`;
+  const note=document.getElementById("vnote");if(note)note.hidden=!voices.length||rank(voices[0])===0;}
+function bindVoice(){fillVoices();
+  const s=document.getElementById("vsel");
+  const choose=()=>{const v=voices[+s.value];if(!v)return;voice=v;try{localStorage.setItem("voiceKey",vkey(v))}catch(e){}};
+  s.onchange=()=>{choose();say("the, was, said")};s.oninput=choose;
+  s.onblur=()=>setTimeout(pickVoice,50);
+  document.getElementById("vtest").onclick=()=>{choose();say("Kia ora! Find the word... said")};}
+try{pickVoice();speechSynthesis.onvoiceschanged=pickVoice}catch(e){}
+
+let unlocked=false;
+function unlockSpeech(){if(unlocked)return;unlocked=true;try{const u=new SpeechSynthesisUtterance(" ");u.volume=0;speechSynthesis.speak(u)}catch(e){}}
+["touchend","pointerdown","click"].forEach(ev=>document.addEventListener(ev,unlockSpeech,{capture:true,passive:true}));
+let vtries=0;const vpoll=setInterval(()=>{pickVoice();if(voices.length||++vtries>20)clearInterval(vpoll)},250);
+let speakRef=null,speakTimer=0,startTimer=0;
+function setStatus(t){const el=document.getElementById("vnote2");if(el){el.textContent=t;el.hidden=!t}}
+function localBackup(){return voices.find(v=>v.localService&&rank(v)<=2)||voices.find(v=>v.localService)||null}
+function say(t,rate=.8,tryVoice){try{
+  const ss=speechSynthesis;clearTimeout(speakTimer);clearTimeout(startTimer);
+  const busyNow=ss.speaking||ss.pending;if(busyNow)ss.cancel();
+  const v=tryVoice||voice;
+  const go=()=>{
+    const u=new SpeechSynthesisUtterance(t);speakRef=u;
+    u.lang=v?v.lang:"en-NZ";if(v)u.voice=v;u.rate=rate;u.pitch=1.1;u.volume=1;
+    let started=false;
+    u.onstart=()=>{started=true;clearTimeout(startTimer);if(!tryVoice)setStatus("")};
+    const fallback=()=>{if(started||tryVoice)return;const b=localBackup();
+      if(b&&(!v||b!==v)){setStatus(`${v?v.name.split(" - ")[0]:"That voice"} didn't play, so ${b.name.split(" - ")[0]} is reading instead. Check the internet connection for the New Zealand voice.`);say(t,rate,b)}};
+    u.onerror=e=>{if(e.error!=="interrupted"&&e.error!=="canceled")fallback()};
+    ss.resume();ss.speak(u);
+    startTimer=setTimeout(fallback,2500);
+  };
+  if(busyNow)speakTimer=setTimeout(go,120);else go();
+}catch(e){}}
+const spoken=w=>w==="a"?"a":w;
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+
+function nextWord(){
+  // tricky words come back more often
+  const pool=[];WORDS.forEach(w=>{const n=1+Math.min(4,S.miss[w.toLowerCase()]||0);for(let i=0;i<n;i++)pool.push(w)});
+  let w;do{w=pool[Math.random()*pool.length|0]}while(S.target&&w.toLowerCase()===S.target.toLowerCase());
+  return w;
+}
+function distractors(t){
+  const lo=t.toLowerCase(),seen=new Set([lo]),out=[];
+  // prefer look-alikes: same first letter or same length
+  const near=shuffle(WORDS.filter(w=>{const l=w.toLowerCase();return!seen.has(l)&&(l[0]===lo[0]||l.length===lo.length)}));
+  const rest=shuffle(WORDS.slice());
+  for(const w of [...near,...rest]){const l=w.toLowerCase();if(!seen.has(l)){seen.add(l);out.push(w)}if(out.length===2)break}
+  return out;
+}
+
+function home(){
+  speechSynthesis&&speechSynthesis.cancel&&speechSynthesis.cancel();
+  app.innerHTML=`
+  <a class="allgames" href="index.html">◀ All games</a>
+  <h1>Word Monsters</h1>
+  <p class="sub">Pick your buddy. Every word you read feeds it!</p>
+  <div class="modes" role="group" aria-label="Game mode">
+    <button class="chip" id="m-hear" aria-pressed="${S.mode==="hear"}">Listen &amp; tap</button>
+    <button class="chip" id="m-read" aria-pressed="${S.mode==="read"}">Read it out loud</button>
+  </div>
+  <div class="pick">${Object.keys(BUDDY).map(k=>`<button class="buddy" data-b="${k}">${ART[k].replace('class="hero"','')}<b>${BUDDY[k].name}</b><span>${BUDDY[k].blurb}</span></button>`).join("")}</div>
+  <div class="vpick"><label for="vsel">Voice:</label> <select id="vsel"></select> <button class="chip" id="vtest">Test voice</button></div>
+  <p class="vnote" id="vnote2" hidden></p>
+  <p class="vnote" id="vnote" hidden>No New Zealand voice on this device. On iPhone or iPad, pick an Australian voice like Karen. On a Windows computer, use Microsoft Edge for the New Zealand voice Molly.</p>
+  <p class="words">${WORDS.length} words: ${WORDS.join(" · ")}</p>`;
+  bindVoice();
+  app.querySelector("#m-hear").onclick=()=>{S.mode="hear";save();home()};
+  app.querySelector("#m-read").onclick=()=>{S.mode="read";save();home()};
+  app.querySelectorAll(".buddy").forEach(b=>b.onclick=()=>{S.buddy=b.dataset.b;S.score=0;S.round=[];S.target=null;save();game()});
+}
+
+function game(){
+  const B=BUDDY[S.buddy];
+  app.innerHTML=`
+  <div class="bar"><button class="home" id="home">◀ Home</button><div class="track"><div class="fill" id="fill"></div></div><div class="score" id="score">${S.score} / ${NEED}</div></div>
+  <div class="arena ${B.scene}" id="arena">${S.buddy==="shark"?'<div class="bubbles">'+[8,30,55,80].map((x,i)=>`<span style="left:${x}%;animation-delay:${i*1.4}s"></span>`).join("")+'</div>':""}${ART[S.buddy]}${PREY[S.buddy]}</div>
+  <div id="play"></div>`;
+  app.querySelector("#home").onclick=home;
+  if(S.buddy==="snake")grow();
+  ask();
+}
+function grow(){const h=app.querySelector(".hero");if(h)h.style.transform=`scaleX(${1+S.score*.04})`;h&&(h.style.transformOrigin="left bottom")}
+
+function ask(){
+  S.target=nextWord();S.tries=0;
+  const play=app.querySelector("#play");
+  if(S.mode==="hear"){
+    const opts=shuffle([S.target,...distractors(S.target)]);
+    play.innerHTML=`<div class="prompt"><button class="say" id="say">🔊 Hear the word</button></div>
+      <div class="cards">${opts.map(w=>`<button class="card" data-w="${w}">${w}</button>`).join("")}</div>
+      <p class="hint">Tap the word you hear.</p>`;
+    play.querySelector("#say").onclick=()=>say(spoken(S.target));
+    play.querySelectorAll(".card").forEach(c=>c.onclick=()=>pickCard(c));
+    say("Find... "+spoken(S.target));
+  }else{
+    play.innerHTML=`<div class="flash">${S.target}</div>
+      <div class="judge"><button class="yes" id="yes">✔ Got it!</button><button class="again" id="no">↻ Help me</button></div>
+      <p class="hint">Read the word out loud. A grown-up taps the button.</p>`;
+    play.querySelector("#yes").onclick=()=>correct();
+    play.querySelector("#no").onclick=()=>{S.miss[S.target.toLowerCase()]=(S.miss[S.target.toLowerCase()]||0)+1;save();say(spoken(S.target),.6)};
+  }
+}
+function pickCard(c){
+  if(c.classList.contains("nope"))return;
+  if(c.dataset.w===S.target){c.classList.add("good");correct()}
+  else{c.classList.add("nope");S.tries++;
+    const k=S.target.toLowerCase();S.miss[k]=(S.miss[k]||0)+1;save();
+    setTimeout(()=>say("Try again... "+spoken(S.target)),350)}
+}
+function correct(){
+  const k=S.target.toLowerCase();
+  if(S.tries===0&&S.miss[k])S.miss[k]=Math.max(0,S.miss[k]-1);save();
+  S.score++;S.round.push(S.target);
+  app.querySelectorAll("#play button").forEach(b=>b.disabled=true);
+  const hero=app.querySelector(".hero"),prey=app.querySelector(".prey");
+  const cls="act-"+S.buddy;hero.classList.remove(cls);void hero.offsetWidth;hero.classList.add(cls);
+  setTimeout(()=>prey.classList.add("gone"),330);
+  say(["Yes!","Awesome!","Chomp!","Crunch!","Great reading!"][Math.random()*5|0]+" "+spoken(S.target),1);
+  app.querySelector("#fill").style.width=(S.score/NEED*100)+"%";
+  app.querySelector("#score").textContent=`${S.score} / ${NEED}`;
+  setTimeout(()=>{
+    if(S.score>=NEED)return win();
+    prey.classList.remove("gone");hero.classList.remove(cls);if(S.buddy==="snake")grow();ask();
+  },1300);
+}
+function win(){
+  const B=BUDDY[S.buddy];
+  const tricky=Object.entries(S.miss).filter(([,n])=>n>0).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([w])=>w);
+  app.querySelector("#play").innerHTML=`<div class="win">
+    <div class="big">You did it!</div>
+    <div class="sub">${NEED} ${B.verb}. ${B.name} is so happy!</div>
+    ${tricky.length?`<div class="tricky">Practise these: <b>${tricky.join(", ")}</b></div>`:""}
+    <button class="go" id="again">Play again</button></div>`;
+  say(`You did it! ${NEED} ${B.verb}!`,.95);
+  app.querySelector("#again").onclick=()=>{S.score=0;S.round=[];game()};
+}
+home();
+</script>
+
+<script>if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{})</script>
+</body>
+</html>
