@@ -52,13 +52,13 @@ h1{margin:0;font-size:clamp(36px,8vw,60px);color:var(--sun);text-shadow:0 4px 0 
 .kelp{position:absolute;bottom:0;width:14px;border-radius:10px 10px 0 0;background:var(--kelp);transform-origin:bottom;animation:sway 4s ease-in-out infinite alternate}
 @keyframes sway{to{transform:rotate(8deg)}}
 .fish{position:absolute;display:flex;align-items:center;cursor:pointer;background:none;padding:0;will-change:transform}
-.fish .body{background:var(--fc);color:var(--ink);font-family:var(--read);font-weight:700;font-size:clamp(30px,7vw,46px);line-height:1;padding:12px 20px 14px 26px;border-radius:50% 40% 40% 50%/60% 50% 50% 60%;box-shadow:0 5px 0 rgba(0,0,0,.35);position:relative;min-width:64px;text-align:center}
+.fish .body{background:var(--fc);color:var(--ink);font-family:var(--read);font-weight:700;font-size:clamp(30px,7vw,46px);line-height:1;padding:12px 32px 14px 20px;border-radius:50% 40% 40% 50%/60% 50% 50% 60%;box-shadow:0 5px 0 rgba(0,0,0,.35);position:relative;min-width:64px;text-align:center}
 .fish .body::before{content:"";position:absolute;right:12px;top:40%;width:8px;height:8px;border-radius:50%;background:var(--ink)}
 .fish .tail{width:0;height:0;border-top:22px solid transparent;border-bottom:22px solid transparent;border-left:30px solid var(--fc);margin-right:-6px}
 .fish.rev{flex-direction:row-reverse}
 .fish.rev .tail{border-left:0;border-right:30px solid var(--fc);margin:0 0 0 -6px}
 .fish.rev .body::before{right:auto;left:12px}
-.fish.rev .body{border-radius:40% 50% 50% 40%/50% 60% 60% 50%;padding:12px 26px 14px 20px}
+.fish.rev .body{border-radius:40% 50% 50% 40%/50% 60% 60% 50%;padding:12px 20px 14px 32px}
 .fish{--fc:var(--sun)}.fish.c1{--fc:#ffd25a}.fish.c2{--fc:#ff9fc4}.fish.c3{--fc:#9fe7ff}.fish.c4{--fc:#b9f08a}
 .fish.wrong .body{animation:shake .4s}
 .fish.eaten{transition:transform .25s,opacity .25s;opacity:0}
@@ -78,6 +78,19 @@ h1{margin:0;font-size:clamp(36px,8vw,60px);color:var(--sun);text-shadow:0 4px 0 
 @keyframes pop{to{transform:translateY(-60px) scale(1.4);opacity:0}}
 @media (prefers-reduced-motion:reduce){.kelp,.splash{animation:none}.hunter{transition:none}}
 @media (max-width:480px){.hunter{width:130px}.sea{min-height:440px}}
+@media (orientation:landscape) and (max-height:540px){
+  .wrap{height:100%;min-height:0;padding-block:6px;gap:6px}
+  .sea{min-height:180px}
+  .hint{display:none}
+  .say{padding:8px 22px;font-size:20px;box-shadow:0 3px 0 var(--ink)}
+  .home{padding:5px 12px;font-size:16px}.track{height:16px}.score{font-size:18px}
+  .hunter{width:110px}
+  .fish .body{font-size:28px;padding:6px 28px 8px 14px}.fish.rev .body{padding:6px 14px 8px 28px}
+  .fish .tail{border-top-width:15px;border-bottom-width:15px;border-left-width:20px}
+  .fish.rev .tail{border-right-width:20px}
+  .pick{grid-template-columns:repeat(3,1fr)}.shark svg{height:64px}.shark b{font-size:20px}
+  h1{font-size:34px}
+}
 .vpick{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-family:var(--read);font-size:17px}
 .vpick select{font-family:var(--read);font-size:16px;padding:8px 10px;border-radius:12px;border:3px solid var(--foam);background:var(--ink);color:var(--foam);max-width:100%;min-width:0}
 .vnote{font-family:var(--read);font-size:14px;opacity:.8;margin:0}
@@ -133,6 +146,7 @@ let unlocked=false;
 function unlockSpeech(){if(unlocked)return;unlocked=true;try{const u=new SpeechSynthesisUtterance(" ");u.volume=0;speechSynthesis.speak(u)}catch(e){}}
 ["touchend","pointerdown","click"].forEach(ev=>document.addEventListener(ev,unlockSpeech,{capture:true,passive:true}));
 let vtries=0;const vpoll=setInterval(()=>{pickVoice();if(voices.length||++vtries>20)clearInterval(vpoll)},250);
+function pron(t){return String(t).replace(/(^|[^A-Za-z'])[aA](?=$|[^A-Za-z'])/g,"$1uh").replace(/(^|[^A-Za-z'])I(?=$|[^A-Za-z'])/g,"$1eye")}
 let speakRef=null,speakTimer=0,startTimer=0;
 function setStatus(t){const el=document.getElementById("vnote2");if(el){el.textContent=t;el.hidden=!t}}
 function localBackup(){return voices.find(v=>v.localService&&rank(v)<=2)||voices.find(v=>v.localService)||null}
@@ -141,7 +155,7 @@ function say(t,rate=.8,tryVoice){try{
   const busyNow=ss.speaking||ss.pending;if(busyNow)ss.cancel();
   const v=tryVoice||voice;
   const go=()=>{
-    const u=new SpeechSynthesisUtterance(t);speakRef=u;
+    const u=new SpeechSynthesisUtterance(pron(t));speakRef=u;
     u.lang=v?v.lang:"en-NZ";if(v)u.voice=v;u.rate=rate;u.pitch=1.1;u.volume=1;
     let started=false;
     u.onstart=()=>{started=true;clearTimeout(startTimer);if(!tryVoice)setStatus("")};
@@ -192,7 +206,7 @@ function start(){
   sea=app.querySelector("#sea");hunter=app.querySelector("#hunter");
   app.querySelector("#home").onclick=home;
   app.querySelector("#say").onclick=()=>target&&say(target);
-  placeHunter(16,sea.clientHeight-140,false);
+  placeHunter(16,Math.max(0,sea.clientHeight-hunter.offsetWidth*0.75),false);
   round();last=performance.now();loop(last);
 }
 
@@ -209,12 +223,20 @@ function pickOthers(t,n){
   return out;
 }
 
+function laneFish(){if(!sea)return;
+  const H=sea.clientHeight,W=sea.clientWidth,top=10;
+  fishes.forEach(f=>{const fh=f.el.offsetHeight||60,usable=Math.max(0,H*0.85-fh-top);
+    f.y=top+f.i*(usable/((f.n-1)||1));if(f.x>W)f.x=W-f.el.offsetWidth;});
+}
+let rsz=0;
+function relayout(){clearTimeout(rsz);rsz=setTimeout(()=>{if(!sea||!document.body.contains(sea))return;
+  laneFish();const hw=hunter.offsetWidth;placeHunter(16,Math.max(0,sea.clientHeight-hw*0.75),false);},200)}
+window.addEventListener("resize",relayout);window.addEventListener("orientationchange",relayout);
 function round(){
   fishes.forEach(f=>f.el.remove());fishes=[];
   target=nextWord();tries=0;busy=false;
-  const narrow=sea.clientWidth<520, count=narrow?3:4;
+  const narrow=sea.clientWidth<520||sea.clientHeight<320, count=narrow?3:4;
   const words=shuffle([target,...pickOthers(target,count-1)]);
-  const H=sea.clientHeight, lanes=count, top=20, usable=H*0.85-90-top;
   const base=S.speed==="fast"?70:38;
   words.forEach((w,i)=>{
     const el=document.createElement("button");
@@ -222,11 +244,12 @@ function round(){
     el.innerHTML=`<div class="tail"></div><div class="body">${w}</div>`;
     sea.appendChild(el);
     const dir=i%2?-1:1;
-    const f={el,w,dir,y:top+i*(usable/(lanes-1||1)),x:Math.random()*(sea.clientWidth-160),v:base*(0.8+Math.random()*0.4),wob:Math.random()*6};
+    const f={el,w,dir,i,n:count,y:0,x:Math.random()*(sea.clientWidth-160),v:base*(0.8+Math.random()*0.4),wob:Math.random()*6};
     if(dir<0)el.classList.add("rev");
     el.onclick=()=>tap(f);
     fishes.push(f);
   });
+  laneFish();
   setTimeout(()=>say("Find... "+target),250);
 }
 

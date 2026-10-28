@@ -80,6 +80,18 @@ h1{margin:0;font-size:clamp(34px,7vw,56px);letter-spacing:1px;text-wrap:balance;
 .bubbles span{position:absolute;bottom:-20px;width:10px;height:10px;border-radius:50%;border:2px solid rgba(255,255,255,.4);animation:up 6s linear infinite}
 @keyframes up{to{transform:translateY(-240px)}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (orientation:landscape) and (max-height:540px){
+  .wrap{padding-block:6px;gap:8px}
+  .arena{height:130px}.arena svg.hero{height:100px;bottom:6px}.prey{height:42px;bottom:8px}
+  .say{padding:8px 20px;font-size:20px;box-shadow:0 3px 0 var(--ink)}
+  .card{font-size:40px;padding:12px 4px;box-shadow:0 4px 0 var(--ink)}
+  .flash{font-size:76px;padding:6px 0}
+  .judge button{padding:10px;font-size:22px}
+  .hint{display:none}
+  .home{padding:5px 12px;font-size:16px}.track{height:16px}.score{font-size:18px}
+  .pick{grid-template-columns:repeat(3,1fr)}.buddy svg{height:64px}.buddy b{font-size:20px}
+  h1{font-size:34px}
+}
 @media (max-width:440px){.cards{gap:8px}.card{padding:18px 2px}.arena{height:160px}.arena svg.hero{height:120px}}
 .vpick{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-family:var(--read);font-size:17px}
 .vpick select{font-family:var(--read);font-size:16px;padding:8px 10px;border-radius:12px;border:3px solid var(--foam);background:var(--ink);color:var(--foam);max-width:100%;min-width:0}
@@ -144,6 +156,7 @@ let unlocked=false;
 function unlockSpeech(){if(unlocked)return;unlocked=true;try{const u=new SpeechSynthesisUtterance(" ");u.volume=0;speechSynthesis.speak(u)}catch(e){}}
 ["touchend","pointerdown","click"].forEach(ev=>document.addEventListener(ev,unlockSpeech,{capture:true,passive:true}));
 let vtries=0;const vpoll=setInterval(()=>{pickVoice();if(voices.length||++vtries>20)clearInterval(vpoll)},250);
+function pron(t){return String(t).replace(/(^|[^A-Za-z'])[aA](?=$|[^A-Za-z'])/g,"$1uh").replace(/(^|[^A-Za-z'])I(?=$|[^A-Za-z'])/g,"$1eye")}
 let speakRef=null,speakTimer=0,startTimer=0;
 function setStatus(t){const el=document.getElementById("vnote2");if(el){el.textContent=t;el.hidden=!t}}
 function localBackup(){return voices.find(v=>v.localService&&rank(v)<=2)||voices.find(v=>v.localService)||null}
@@ -152,7 +165,7 @@ function say(t,rate=.8,tryVoice){try{
   const busyNow=ss.speaking||ss.pending;if(busyNow)ss.cancel();
   const v=tryVoice||voice;
   const go=()=>{
-    const u=new SpeechSynthesisUtterance(t);speakRef=u;
+    const u=new SpeechSynthesisUtterance(pron(t));speakRef=u;
     u.lang=v?v.lang:"en-NZ";if(v)u.voice=v;u.rate=rate;u.pitch=1.1;u.volume=1;
     let started=false;
     u.onstart=()=>{started=true;clearTimeout(startTimer);if(!tryVoice)setStatus("")};
