@@ -9,6 +9,6 @@ A co-op underwater treasure hunt for little kids. No game over.
 
 # Reading Games
 
-Sight-word and number games (Word Monsters, Shark Snack Attack, Anaconda Sentences, Monster Truck Numbers) in `reading/`.
+Sight-word and number games (Word Monsters, Shark Snack Attack, Shark Sentences, Shark Numbers) in `reading/`.
 - Play: `reading/index.html`
 - On iPhone: open in Safari → Share → **Add to Home Screen**.

@@ -12,12 +12,12 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon-192.png">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
-<title>Monster Truck Numbers</title>
+<title>Shark Numbers</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@700&family=Lilita+One&display=swap">
 <style>
-/* Layout: dirt-track arena. Top bar, the track with cars parked in ten-frames, a question, three big number buttons. Single committed dusk-stadium look. */
+/* Layout: ocean tank. Top bar, the sea with fish sitting in ten-frames and a megalodon, a question, three big number buttons. Single committed deep-sea look. */
 :root{
-  --night:#1b1530; --dusk:#3a2650; --dirt:#8a5a34; --mud:#5e3a1e; --flame:#ff7a3d; --sun:#ffd25a; --lime:#9be35a; --foam:#fff8ef; --ink:#140d1f;
+  --night:#06243a; --dusk:#1d7fa6; --dirt:#0f4a6b; --mud:#0a3550; --flame:#ff7a59; --sun:#ffd25a; --lime:#9be35a; --foam:#f2fbff; --ink:#061826;
   --display:"Lilita One","Arial Rounded MT Bold",system-ui,sans-serif;
   --read:"Andika","Comic Sans MS",system-ui,sans-serif;
   color-scheme:dark;
@@ -36,7 +36,7 @@ h1{margin:0;font-size:clamp(36px,8vw,58px);color:var(--flame);text-shadow:0 4px 
 .chip[aria-pressed="true"]{background:var(--sun);border-color:var(--sun);color:var(--ink)}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-family:var(--read);font-size:17px}
 .hero{display:flex;justify-content:center}
-.hero svg{width:100%;max-width:300px;height:auto}
+.hero svg{width:100%;max-width:320px;height:auto}
 .go{background:var(--flame);color:var(--ink);border-radius:22px;padding:16px 30px;font-size:28px;box-shadow:0 6px 0 var(--ink);align-self:center}
 .go:active{transform:translateY(3px);box-shadow:0 3px 0 var(--ink)}
 .numline{font-family:var(--read);font-size:22px;letter-spacing:2px;opacity:.85;margin:0;font-variant-numeric:tabular-nums}
@@ -45,14 +45,14 @@ h1{margin:0;font-size:clamp(36px,8vw,58px);color:var(--flame);text-shadow:0 4px 
 .track{flex:1;min-width:120px;height:22px;background:rgba(255,255,255,.15);border-radius:99px;overflow:hidden}
 .fill{height:100%;width:0;background:var(--flame);transition:width .4s}
 .score{font-size:22px;color:var(--sun);font-variant-numeric:tabular-nums}
-.arena{position:relative;border-radius:26px;background:linear-gradient(transparent 0 30%,var(--dirt) 30%,var(--mud));padding:72px 12px 14px;min-height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;overflow:hidden}
-.arena .bigtruck{position:absolute;left:8px;top:2px;width:110px;transition:transform .2s}
+.arena{position:relative;border-radius:26px;background:linear-gradient(rgba(255,255,255,.08),transparent 50%),linear-gradient(transparent 88%,#c9a86a 88%);padding:72px 12px 14px;min-height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;overflow:hidden}
+.arena .bigtruck{position:absolute;left:8px;top:6px;width:130px;transition:transform .2s}
 .frames{display:flex;flex-direction:column;gap:8px;align-items:center}
 .frame{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;background:rgba(0,0,0,.25);padding:6px;border-radius:12px;border:3px solid rgba(255,255,255,.35)}
 .cell{width:clamp(40px,11vw,62px);aspect-ratio:1.4;max-width:100%;display:flex;align-items:center;justify-content:center;border-radius:6px;background:rgba(255,255,255,.06)}
 .cell svg{width:90%;height:auto;transition:transform .2s,opacity .2s}
-.cell.crushed svg{transform:scaleY(.25) translateY(40%);opacity:.6}
-.cell.crushed{background:rgba(255,122,61,.35)}
+.cell.crushed svg{transform:scale(0) rotate(90deg);opacity:0}
+.cell.crushed{background:rgba(255,210,90,.3)}
 .seq{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center}
 .seq .car{background:var(--foam);color:var(--ink);font-family:var(--read);font-weight:700;font-size:clamp(34px,9vw,56px);border-radius:16px;padding:6px 16px;min-width:64px;text-align:center;box-shadow:0 5px 0 var(--ink);font-variant-numeric:tabular-nums}
 .seq .car.blank{background:transparent;color:var(--sun);box-shadow:inset 0 0 0 4px var(--sun)}
@@ -69,7 +69,7 @@ h1{margin:0;font-size:clamp(36px,8vw,58px);color:var(--flame);text-shadow:0 4px 
 .opt.nope{opacity:.25;animation:wob .4s}
 .opt.words{font-size:clamp(26px,7vw,40px);padding:22px 4px}
 @keyframes wob{25%{transform:rotate(-6deg)}75%{transform:rotate(6deg)}}
-@keyframes jump{40%{transform:translate(40px,-30px) rotate(-10deg)}100%{transform:none}}
+@keyframes jump{40%{transform:translateX(30px) scale(1.15)}100%{transform:none}}
 .bigtruck.jump{animation:jump .5s ease-in-out}
 .win{text-align:center;display:flex;flex-direction:column;gap:14px;align-items:center}
 .win .big{font-size:clamp(40px,9vw,70px);color:var(--sun)}
@@ -103,13 +103,13 @@ h1{margin:0;font-size:clamp(36px,8vw,58px);color:var(--flame);text-shadow:0 4px 
 <script>
 const ROUNDS=10;
 const NAMES=["zero","one","two","three","four","five","six","seven","eight","nine","ten","eleven","twelve","thirteen","fourteen","fifteen","sixteen","seventeen","eighteen","nineteen","twenty"];
-const TRUCK=`<svg class="bigtruck" viewBox="0 0 220 150" aria-hidden="true"><rect x="40" y="40" width="130" height="45" rx="10" fill="#ff7a3d"/><rect x="95" y="14" width="60" height="34" rx="8" fill="#ff7a3d"/><rect x="104" y="20" width="42" height="20" rx="4" fill="#bfe8ff"/><path d="M50 50l20 0-10 25z" fill="#ffd25a"/><path d="M80 50l20 0-10 25z" fill="#ffd25a"/><circle cx="62" cy="110" r="34" fill="#140d1f"/><circle cx="62" cy="110" r="14" fill="#9a9a9a"/><circle cx="160" cy="110" r="34" fill="#140d1f"/><circle cx="160" cy="110" r="14" fill="#9a9a9a"/></svg>`;
-const CARCOL=["#3d7fd6","#9be35a","#ff6fa8","#ffd25a","#5fd6d6"];
-const car=c=>`<svg viewBox="0 0 100 60" aria-hidden="true"><rect x="5" y="22" width="90" height="24" rx="6" fill="${c}"/><rect x="25" y="8" width="45" height="20" rx="6" fill="${c}"/><rect x="31" y="12" width="33" height="12" rx="3" fill="#dff3ff"/><circle cx="25" cy="48" r="10" fill="#140d1f"/><circle cx="75" cy="48" r="10" fill="#140d1f"/></svg>`;
+const TRUCK=`<svg class="bigtruck" viewBox="0 0 240 130" aria-hidden="true"><path d="M8 70 Q60 22 150 36 Q206 46 232 74 Q200 104 140 108 Q60 112 8 70Z" fill="#7d98a8"/><path d="M108 38 L128 0 L150 40Z" fill="#7d98a8"/><path d="M12 70 L-4 34 L6 70 L-4 108Z" fill="#7d98a8"/><path d="M58 100 Q140 122 228 78 Q200 96 140 102 Q90 106 58 100Z" fill="#eef4f7"/><circle cx="198" cy="62" r="6" fill="#061826"/><path d="M168 84 Q200 98 228 78 L224 90 Q198 108 166 92Z" fill="#7a1f1f"/><path d="M172 86l6 6 6-5 6 6 6-6 6 5 6-6" stroke="#fff" stroke-width="3" fill="none"/><path d="M95 76 L110 96 L120 76Z" fill="#62808f"/></svg>`;
+const CARCOL=["#ffd25a","#ff9fc4","#9fe7ff","#b9f08a"];
+const car=c=>`<svg viewBox="0 0 100 60" aria-hidden="true"><ellipse cx="44" cy="30" rx="34" ry="20" fill="${c}"/><path d="M74 30 L98 10 L98 50Z" fill="${c}"/><circle cx="24" cy="25" r="5" fill="#061826"/><path d="M12 36 q6 4 12 0" stroke="#061826" stroke-width="3" fill="none" stroke-linecap="round"/></svg>`;
 
 let S={max:10,words:false,miss:{}};
-try{Object.assign(S,JSON.parse(localStorage.getItem("mtn")||"{}"))}catch(e){}
-function save(){try{localStorage.setItem("mtn",JSON.stringify(S))}catch(e){}}
+try{Object.assign(S,JSON.parse(localStorage.getItem("shn")||"{}"))}catch(e){}
+function save(){try{localStorage.setItem("shn",JSON.stringify(S))}catch(e){}}
 
 let voice=null,voices=[],vsig="";
 const nz=l=>(l||"").replace("_","-").toLowerCase();
@@ -170,8 +170,8 @@ function home(){
   try{speechSynthesis.cancel()}catch(e){}
   app.innerHTML=`
   <a class="allgames" href="index.html" id="allg">◀ All games</a>
-  <h1>Monster Truck Numbers</h1>
-  <p class="sub">Count the cars, find the numbers, and crush them all!</p>
+  <h1>Shark Numbers</h1>
+  <p class="sub">Count the fish, find the numbers, and let the megalodon gobble them up!</p>
   <div class="hero">${TRUCK.replace('class="bigtruck"','')}</div>
   <div class="row">Numbers:
     <button class="chip" data-m="10" aria-pressed="${S.max===10}">1 to 10</button>
@@ -234,8 +234,8 @@ function ask(){
   let prompt="";
   if(type==="count"){
     arena.innerHTML=TRUCK+frames(n);
-    prompt="How many cars?";
-    q.innerHTML=`<span class="qtext">How many cars?</span><button class="say" id="say">🔊</button>`;
+    prompt="How many fish?";
+    q.innerHTML=`<span class="qtext">How many fish?</span><button class="say" id="say">🔊</button>`;
   }else if(type==="find"){
     arena.innerHTML=TRUCK+`<div class="bignum" aria-label="number">?</div>`;
     prompt="Find the number... "+n;
@@ -291,7 +291,7 @@ function correct(){
   if(Q.type==="count"){countAlong(true,()=>setTimeout(nextStep,500))}
   else{
     const big=app.querySelector(".bignum,.seq .blank");if(big){big.textContent=n;big.classList&&big.classList.remove("blank")}
-    say(["Yes! ","Awesome! ","Smash! ","Vroom! "][Math.random()*4|0]+n+"!",1);
+    say(["Yes! ","Awesome! ","Chomp! ","Gulp! "][Math.random()*4|0]+n+"!",1);
     setTimeout(nextStep,1600);
   }
 }
@@ -301,11 +301,11 @@ function win(){
   app.querySelector("#arena").innerHTML=TRUCK+frames(Math.min(S.max,20));
   app.querySelector("#q").innerHTML="";
   app.querySelector("#opts").outerHTML=`<div class="win">
-    <div class="big">Monster champion!</div>
-    <div class="sub">${ROUNDS} out of ${ROUNDS}. What a driver!</div>
+    <div class="big">Shark champion!</div>
+    <div class="sub">${ROUNDS} out of ${ROUNDS}. What a hunter!</div>
     ${tricky.length?`<div class="tricky">Practise these numbers: <b>${tricky.join(", ")}</b></div>`:""}
     <button class="go" id="again">Play again</button></div>`;
-  say("Monster champion! What a driver!",.95);
+  say("Shark champion! What a hunter!",.95);
   app.querySelector("#again").onclick=start;
 }
 home();
