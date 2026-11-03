@@ -12,3 +12,6 @@ A co-op underwater treasure hunt for little kids. No game over.
 Sight-word and number games (Word Monsters, Shark Snack Attack, Shark Sentences, Shark Numbers) in `reading/`.
 - Play: `reading/index.html`
 - On iPhone: open in Safari → Share → **Add to Home Screen**.
+
+## Shark Snack Attack 3D
+`reading/shark-3d.html`. To change its words, edit `reading/words.js` (one word per quote, comma between words).
