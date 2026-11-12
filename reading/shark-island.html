@@ -1,0 +1,810 @@
+<!doctype html>
+<html lang="en-NZ">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Reading Games">
+<meta name="theme-color" content="#050b1a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<title>Shark Island After Dark</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@700&family=Lilita+One&display=swap">
+<style>
+/* Layout: full-screen 3D canvas. A thin HUD on top (stop button, question, speaker), and one overlay panel for menus. Night-sea look. */
+:root{--deep:#050b1a;--mid:#0d2a4b;--sun:#ffd25a;--coral:#ff6b4a;--foam:#f2fbff;--ink:#03060f;--glow:#7dfcff;
+  --display:"Lilita One","Arial Rounded MT Bold",system-ui,sans-serif;--read:"Andika","Comic Sans MS",system-ui,sans-serif;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;overflow:hidden;background:var(--deep);color:var(--foam);font-family:var(--display);
+  -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;touch-action:none;overscroll-behavior:none}
+canvas#cv{position:fixed;inset:0;width:100%;height:100%;display:block}
+button{font-family:inherit;color:var(--ink);border:0;cursor:pointer;touch-action:manipulation}
+#hud{position:fixed;left:0;right:0;top:0;display:flex;align-items:flex-start;gap:8px;pointer-events:none;
+  padding:calc(env(safe-area-inset-top,0px) + 8px) max(10px,env(safe-area-inset-right,0px)) 0 max(10px,env(safe-area-inset-left,0px))}
+#hud[hidden]{display:none}
+#hud button{pointer-events:auto;flex:none;width:52px;height:52px;border-radius:16px;font-size:26px;background:rgba(242,251,255,.92);box-shadow:0 4px 0 var(--ink)}
+#hud button:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+#quit{background:rgba(242,251,255,.35)!important;font-size:20px!important}
+#qbox{flex:1;min-width:0;text-align:center;background:rgba(3,6,15,.72);border:3px solid var(--sun);border-radius:20px;padding:6px 8px 8px}
+#q{font-family:var(--read);font-weight:700;font-size:clamp(30px,9vw,60px);line-height:1.1;color:#fff;letter-spacing:.02em;white-space:nowrap}
+#q .slot{display:inline-block;min-width:1.1em;margin:0 .06em;padding:0 .12em;border-radius:.2em;background:rgba(255,255,255,.1);border-bottom:.09em solid var(--sun)}
+#q .slot.empty{color:transparent;background:rgba(255,210,90,.22)}
+#q .slot.now{animation:pulse 1s infinite}
+#q .slot.pop{animation:pop .4s}
+#q .ask{color:var(--sun)}
+#qsub{font-size:18px;min-height:22px;letter-spacing:.2em;color:var(--sun)}
+@keyframes pulse{50%{background:rgba(255,210,90,.55)}}
+@keyframes pop{0%{transform:scale(1.6)}100%{transform:scale(1)}}
+@keyframes shake{20%,60%{transform:translateX(-7px)}40%,80%{transform:translateX(7px)}}
+@keyframes bob{50%{transform:translateY(-8px)}}
+#ui{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;overflow:auto;touch-action:pan-y;
+  padding:calc(env(safe-area-inset-top,0px) + 14px) max(14px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 14px) max(14px,env(safe-area-inset-left,0px))}
+#ui[hidden]{display:none}
+#ui.dim{background:rgba(3,6,15,.62)}
+#ui.low .panel{margin:auto auto 0;background:rgba(3,6,15,.6);border-radius:22px;padding:14px}
+.panel{width:100%;max-width:560px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;margin:auto}
+h1{margin:0;font-size:clamp(44px,13vw,84px);line-height:.95;color:var(--sun);text-shadow:0 5px 0 var(--ink),0 0 30px rgba(125,252,255,.35)}
+h1 small{display:block;font-size:.42em;color:var(--glow);letter-spacing:.08em;margin-top:6px}
+h2{margin:0;font-size:clamp(28px,8vw,44px);color:var(--sun);text-shadow:0 3px 0 var(--ink)}
+p{margin:0;font-family:var(--read);font-size:clamp(17px,4.6vw,22px);line-height:1.35}
+.big{font-size:clamp(28px,8vw,40px);padding:16px 30px;border-radius:26px;background:var(--sun);box-shadow:0 7px 0 var(--ink);min-width:230px}
+.big:active,.btn:active,.card:active{transform:translateY(4px);box-shadow:0 2px 0 var(--ink)}
+.big.go{background:#8cf08a}
+.btn{font-size:clamp(18px,5vw,24px);padding:12px 18px;border-radius:18px;background:var(--foam);box-shadow:0 5px 0 var(--ink)}
+.btn.sm{font-size:16px;padding:8px 12px;border-radius:12px}
+.btn.on{background:var(--sun)}
+.btn.ghost{background:rgba(242,251,255,.25);color:var(--foam);box-shadow:none;font-family:var(--read);font-size:15px}
+.row{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;align-items:center}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;width:100%}
+.card{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 10px;border-radius:24px;background:linear-gradient(#17406b,#0a1c36);
+  color:var(--foam);border:3px solid var(--glow);box-shadow:0 6px 0 var(--ink);font-size:clamp(20px,5.5vw,26px)}
+.card .emo{font-size:clamp(46px,14vw,70px);line-height:1;animation:bob 2.4s infinite}
+.card.locked{border-color:#33506e;opacity:.6}
+.card small{font-family:var(--read);font-size:14px;opacity:.8}
+.radio{font-size:86px;animation:shake 1s infinite}
+.crate{font-size:110px;background:none;animation:bob 1.2s infinite}
+.crate.open{animation:pop .5s}
+.note{font-family:var(--read);font-size:14px;opacity:.75}
+/* map */
+.map{display:grid;grid-template-columns:auto repeat(4,1fr);gap:5px;width:min(92vw,460px);background:#e9dcb8;padding:10px;border-radius:18px;box-shadow:0 6px 0 var(--ink)}
+.map .h{color:#3b2c12;font-family:var(--read);font-weight:700;font-size:clamp(20px,6vw,30px);display:flex;align-items:center;justify-content:center;min-width:1.4em;border-radius:8px}
+.map .h.hint{background:var(--coral);color:#fff}
+.map .c{aspect-ratio:1;border-radius:10px;background:#cdb98a;font-size:clamp(26px,8vw,40px);display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 0 2px #a8925e}
+.map .c.no{animation:shake .4s;background:#d99}
+.map .c.yes{background:#8cf08a;animation:pop .4s}
+/* grown-ups */
+.grown{position:relative;overflow:hidden}
+.grown::after{content:"";position:absolute;left:0;bottom:0;height:4px;width:0;background:var(--sun)}
+.grown.holding::after{width:100%;transition:width 1.2s linear}
+.gp{align-items:stretch;text-align:left;background:rgba(3,6,15,.9);border-radius:22px;padding:18px;gap:12px;border:2px solid #29476b}
+.gp label{font-family:var(--read);font-size:16px;display:flex;flex-direction:column;gap:6px}
+.gp input[type=text],.gp textarea,.gp select{font:inherit;font-family:var(--read);font-size:16px;padding:8px;border-radius:10px;border:0;width:100%;user-select:text;-webkit-user-select:text;color:#03060f;background:#f2fbff}
+.gp textarea{min-height:70px}
+.gp h3{margin:6px 0 0;color:var(--sun);font-size:20px}
+#fade{position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .35s}
+#fade.on{opacity:1}
+#nogl{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;background:var(--deep)}
+#nogl[hidden]{display:none}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="hud" hidden>
+  <button id="quit" aria-label="Stop">✕</button>
+  <div id="qbox"><div id="q"></div><div id="qsub"></div></div>
+  <button id="spk" aria-label="Say it again">🔊</button>
+</div>
+<div id="ui"></div>
+<div id="fade"></div>
+<div id="nogl" hidden><p>This game needs 3D graphics, and this device could not start them. Try another browser, or play the other Reading Games.<br><br><a href="index.html" style="color:#ffd25a">Back to Reading Games</a></p></div>
+
+<script src="three.min.js"></script>
+<script>
+"use strict";
+// =====================================================================
+// Shark Island After Dark
+// One night = radio call -> truck ramps (numbers) -> surprise challenge
+// -> submarine dive (finish the word) -> shark rescue -> reward -> free drive.
+// All content lives in the lists just below so new episodes are easy to add.
+// =====================================================================
+
+// ---------- content ----------
+// Only the sounds Alex has at school (Stage 1): m s f a p t c i.
+const START_WORDS=["sat","mat","cat","map","tap","pit","sip","tip","sit","fit","pat","cap","fat","pip","sap","at","it"];
+
+const SPECIES={
+ lantern:{name:"Lantern Shark",place:"the dark cave",emo:"🕳️",trouble:"A little shark is lost in the dark cave.",
+   fact:"Lantern sharks glow in the dark! Some are small enough to fit in your hand.",top:0x2b3350,belly:0x5a6a8c,R:.17,nose:1.9,teeth:7,tooth:.6,size:.8,fin:.9,tail:.95,glow:true},
+ goblin:{name:"Goblin Shark",place:"the old wreck",emo:"🚢",trouble:"A shark is stuck in the old wreck.",
+   fact:"The goblin shark's jaw shoots out to grab its food!",top:0xd79aa6,belly:0xf5dede,R:.16,nose:2.2,teeth:11,tooth:1.3,size:1.15,fin:.8,tail:1.1,goblin:true},
+ thresher:{name:"Thresher Shark",place:"the kelp forest",emo:"🌿",trouble:"A shark is tangled in the kelp forest.",
+   fact:"The thresher shark uses its long tail like a whip to catch fish.",top:0x4d5f86,belly:0xeef2f6,R:.17,nose:1.7,teeth:7,tooth:.7,size:1.25,fin:1,tail:1,thresher:true},
+ sawshark:{name:"Sawshark",place:"the deep reef",emo:"🪸",trouble:"A shark is trapped in a net at the deep reef.",
+   fact:"The sawshark has a nose like a saw, with teeth on the sides.",top:0x9a7d55,belly:0xf1e9d8,R:.14,nose:2.6,teeth:0,size:1.05,fin:.9,tail:.95,saw:true},
+ hammerhead:{name:"Hammerhead",place:"the sunken truck",emo:"🛻",trouble:"A shark is stuck under a sunken monster truck!",
+   fact:"Its eyes are on the ends of its hammer-shaped head!",top:0x8c9aa3,belly:0xeef2f4,R:.15,nose:2.8,teeth:7,tooth:.7,size:1.2,fin:1.35,tail:1.05,hammer:true},
+ whaleshark:{name:"Whale Shark",place:"the big trench",emo:"🌊",trouble:"A giant shark can not turn around in the big trench.",
+   fact:"The biggest fish in the sea today. It eats tiny food called plankton.",top:0x2d5b80,belly:0xdde8f0,R:.19,nose:3.4,teeth:0,size:1.9,fin:.9,tail:1.1,spots:true,wide:true},
+ megalodon:{name:"Megalodon",place:"the bottom of the sea",emo:"🦷",trouble:"Something HUGE is locked in a cage at the bottom of the sea!",boss:true,
+   fact:"The biggest shark that ever lived. It lived long, long ago. Its teeth were as big as your hand!",top:0x4b565e,belly:0xe8ecef,R:.2,nose:1.7,teeth:11,tooth:1.5,size:2.3,fin:1.05,tail:1.05}
+};
+const ORDER=["lantern","goblin","thresher","sawshark","hammerhead","whaleshark","megalodon"];
+
+// Truck parts won from mystery crates.
+const PARTS=[
+ {id:"fin",name:"Shark fin",emo:"🦈"},{id:"flames",name:"Flame paint",emo:"🔥"},{id:"lights",name:"Roof lights",emo:"💡"},
+ {id:"wheels",name:"Monster wheels",emo:"🛞"},{id:"teeth",name:"Shark teeth",emo:"🦷"},{id:"spikes",name:"Spikes",emo:"🔩"},
+ {id:"flag",name:"Pirate flag",emo:"🏴‍☠️"},{id:"gold",name:"Gold paint",emo:"🏆"}
+];
+const SURPRISES=["map","fuel","barrels"];
+
+// ---------- saved state ----------
+let S={ranger:"",truck:"",rescued:[],nights:0,lastDay:"",parts:[],off:{},scary:2,daily:true,wordLvl:1,numLvl:1,wrun:0,nrun:0,
+  stat:{w:{},n:{}},words:null,lastSurprise:""};
+try{Object.assign(S,JSON.parse(localStorage.getItem("sia")||"{}"))}catch(e){}
+function save(){try{localStorage.setItem("sia",JSON.stringify(S))}catch(e){}}
+const $=id=>document.getElementById(id);
+const today=()=>{const d=new Date();return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate()};
+const rnd=(a,b)=>a+Math.random()*(b-a), ri=(a,b)=>Math.floor(rnd(a,b+1)), pick=a=>a[Math.random()*a.length|0];
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+function cleanWords(text){const seen=new Set(),out=[];String(text).toLowerCase().split(/[\s,;]+/).map(w=>w.replace(/[^a-z]/g,"")).filter(w=>w.length>=2&&w.length<=5).forEach(w=>{if(!seen.has(w)){seen.add(w);out.push(w)}});return out}
+const WORDS=()=>(Array.isArray(S.words)&&S.words.length>=4)?S.words:START_WORDS;
+const LETTERS=()=>[...new Set(WORDS().join(""))];
+const rangerName=()=>S.ranger?("Ranger "+S.ranger):"Ranger";
+function note(kind,key,ok){const o=S.stat[kind][key]||(S.stat[kind][key]={ok:0,miss:0});ok?o.ok++:o.miss++}
+
+// ---------- voice (same set-up as the other Reading Games: NZ voice first) ----------
+let voice=null,voices=[],vsig="";
+const nz=l=>(l||"").replace("_","-").toLowerCase();
+const vkey=v=>v.name+"|"+v.lang;
+function rank(v){const l=nz(v.lang),n=v.name.toLowerCase();if(l==="en-nz"||n.includes("new zealand"))return 0;if(l==="en-au")return 1;if(l==="en-gb")return 2;return 3}
+function pickVoice(){try{
+  const list=speechSynthesis.getVoices().filter(v=>nz(v.lang).startsWith("en")).sort((a,b)=>rank(a)-rank(b));
+  const sig=list.map(vkey).join(",");if(sig===vsig&&voices.length)return;
+  vsig=sig;voices=list;
+  let saved=null;try{saved=localStorage.getItem("voiceKey")}catch(e){}
+  const keep=voice&&voices.find(v=>vkey(v)===vkey(voice));
+  voice=keep||voices.find(v=>vkey(v)===saved)||voices[0]||null;fillVoices();
+}catch(e){}}
+function fillVoices(){const s=$("vsel");if(!s||document.activeElement===s)return;
+  s.innerHTML=voices.length?voices.map((v,i)=>`<option value="${i}"${voice&&vkey(v)===vkey(voice)?" selected":""}>${rank(v)===0?"🇳🇿 ":rank(v)===1?"🇦🇺 ":rank(v)===2?"🇬🇧 ":""}${v.name} (${v.lang})</option>`).join(""):`<option>New Zealand English (device default)</option>`}
+try{pickVoice();speechSynthesis.onvoiceschanged=pickVoice}catch(e){}
+let unlocked=false;
+function unlockSpeech(){if(unlocked)return;unlocked=true;try{const u=new SpeechSynthesisUtterance(" ");u.volume=0;speechSynthesis.speak(u)}catch(e){}}
+["touchend","pointerdown","click"].forEach(ev=>document.addEventListener(ev,unlockSpeech,{capture:true,passive:true}));
+let vtries=0;const vpoll=setInterval(()=>{pickVoice();if(voices.length||++vtries>20)clearInterval(vpoll)},250);
+function pron(t){return String(t).replace(/(^|[^A-Za-z'])[aA](?=$|[^A-Za-z'])/g,"$1uh").replace(/(^|[^A-Za-z'])I(?=$|[^A-Za-z'])/g,"$1eye")}
+let speakTimer=0,startTimer=0;
+function localBackup(){return voices.find(v=>v.localService&&rank(v)<=2)||voices.find(v=>v.localService)||null}
+function say(t,rate=.85,tryVoice){try{
+  const ss=speechSynthesis;clearTimeout(speakTimer);clearTimeout(startTimer);
+  const busyNow=ss.speaking||ss.pending;if(busyNow)ss.cancel();
+  const v=tryVoice||voice;
+  const go=()=>{
+    const u=new SpeechSynthesisUtterance(pron(t));
+    u.lang=v?v.lang:"en-NZ";if(v)u.voice=v;u.rate=rate;u.pitch=1.05;u.volume=1;
+    let started=false;u.onstart=()=>{started=true;clearTimeout(startTimer)};
+    const fallback=()=>{if(started||tryVoice)return;const b=localBackup();if(b&&(!v||b!==v))say(t,rate,b)};
+    u.onerror=e=>{if(e.error!=="interrupted"&&e.error!=="canceled")fallback()};
+    ss.resume();ss.speak(u);startTimer=setTimeout(fallback,2500);
+  };
+  if(busyNow)speakTimer=setTimeout(go,120);else go();
+}catch(e){}}
+function hush(){try{clearTimeout(speakTimer);clearTimeout(startTimer);speechSynthesis.cancel()}catch(e){}}
+
+// ---------- little sounds ----------
+let actx=null;
+function ac(){try{if(!actx)actx=new(window.AudioContext||window.webkitAudioContext)();if(actx.state==="suspended")actx.resume()}catch(e){}return actx}
+function tone(type,f1,f2,dur,vol,delay=0){const a=ac();if(!a)return;try{const t=a.currentTime+delay,o=a.createOscillator(),g=a.createGain();
+  o.type=type;o.frequency.setValueAtTime(f1,t);o.frequency.exponentialRampToValueAtTime(Math.max(1,f2),t+dur);
+  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+.012);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+dur+.02)}catch(e){}}
+function noise(dur,vol){const a=ac();if(!a)return;try{const n=a.sampleRate*dur|0,b=a.createBuffer(1,n,a.sampleRate),d=b.getChannelData(0);
+  for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/n,2);const s=a.createBufferSource(),g=a.createGain();g.gain.value=vol;s.buffer=b;s.connect(g);g.connect(a.destination);s.start()}catch(e){}}
+const sfx={
+ pop(){tone("sine",500,1200,.12,.12)},nope(){tone("triangle",300,170,.18,.12)},
+ yay(){[0,.1,.2].forEach((d,i)=>tone("sine",520+i*170,700+i*170,.14,.1,d))},
+ boing(){tone("sine",180,520,.22,.16);tone("sine",520,200,.2,.1,.2)},
+ crash(){noise(.35,.25);tone("square",120,50,.25,.12)},
+ vroom(){tone("sawtooth",70,190,.5,.1)},
+ growl(){tone("sawtooth",75,38,.9,.2);tone("sawtooth",52,30,.9,.16,.05)},
+ glug(){[0,.08,.16].forEach((d,i)=>tone("sine",300+i*90,500+i*120,.1,.08,d))},
+ fanfare(){[0,.14,.28,.42].forEach((d,i)=>tone("triangle",[392,523,659,784][i],[392,523,659,784][i],.2,.14,d))}
+};
+document.addEventListener("pointerdown",ac,{capture:true,passive:true});
+
+// ---------- 3D set-up ----------
+let THREE_OK=typeof THREE!=="undefined";
+let renderer=null;
+if(THREE_OK){try{renderer=new THREE.WebGLRenderer({canvas:$("cv"),antialias:true,powerPreference:"high-performance"})}catch(e){renderer=null}}
+if(!renderer){$("nogl").hidden=false;$("ui").hidden=true}
+
+// ---------- shark model (shared with Shark Snack Attack 3D) ----------
+const GEO={};
+function stdMat(c,o){return new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:.6,metalness:.05},o||{}))}
+function shapeGeo(kind,depth){
+  const s=new THREE.Shape();
+  if(kind==="dorsal"){s.moveTo(.5,0);s.quadraticCurveTo(.3,.7,-.25,1);s.quadraticCurveTo(-.12,.45,-.5,0);s.lineTo(.5,0)}
+  else if(kind==="pect"){s.moveTo(.35,0);s.quadraticCurveTo(.15,.6,-.45,1);s.quadraticCurveTo(-.2,.4,-.35,0);s.lineTo(.35,0)}
+  else if(kind==="tail"){s.moveTo(.12,.16);s.quadraticCurveTo(-.3,.45,-.8,1.05);s.quadraticCurveTo(-.42,.45,-.4,.02);s.quadraticCurveTo(-.44,-.35,-.62,-.72);s.quadraticCurveTo(-.22,-.35,.12,-.16);s.lineTo(.12,.16)}
+  else if(kind==="fishtail"){s.moveTo(.2,0);s.lineTo(-.5,.55);s.quadraticCurveTo(-.32,0,-.5,-.55);s.lineTo(.2,0)}
+  const g=new THREE.ExtrudeGeometry(s,{depth:depth||.06,bevelEnabled:false,curveSegments:10});g.translate(0,0,-(depth||.06)/2);return g}
+function initGeo(){
+  GEO.dorsal=shapeGeo("dorsal");GEO.pect=shapeGeo("pect");GEO.tail=shapeGeo("tail");GEO.fishtail=shapeGeo("fishtail",.14);
+  GEO.sphere=new THREE.SphereGeometry(1,24,16);GEO.lowSphere=new THREE.SphereGeometry(1,10,8);
+  GEO.cone=new THREE.ConeGeometry(1,1,6);GEO.box=new THREE.BoxGeometry(1,1,1);
+}
+const M={};
+function initMats(){M.black=stdMat(0x0b0f12,{roughness:.25});M.white=stdMat(0xffffff,{roughness:.3});M.gum=stdMat(0x6b1218,{roughness:.8});M.tooth=stdMat(0xfffff4,{roughness:.35});M.gill=stdMat(0x2b3439,{roughness:.9})}
+
+function makeShark(key){
+  const sp=SPECIES[key],R=sp.R,hR=1,wR=sp.wide?1.05:.82;
+  const prof=t=>{if(t<.6){const u=t/.6;return .1+.9*Math.pow(Math.sin(u*Math.PI/2),1.5)}const u=(t-.6)/.4;return Math.pow(Math.max(0,1-Math.pow(u,sp.nose)),.5)};
+  const pts=[new THREE.Vector2(0,-.5)];for(let i=0;i<=34;i++){const t=i/34;pts.push(new THREE.Vector2(Math.max(prof(t)*R,1e-4),t-.5))}
+  const g=new THREE.LatheGeometry(pts,30);g.rotateZ(-Math.PI/2);g.scale(1,hR,wR);
+  const pos=g.attributes.position,col=new Float32Array(pos.count*3),cT=new THREE.Color(sp.top),cB=new THREE.Color(sp.belly),cS=sp.stripes?new THREE.Color(sp.stripes):null,c=new THREE.Color();
+  for(let i=0;i<pos.count;i++){const x=pos.getX(i),y=pos.getY(i),t=x+.5,rr=Math.max(prof(Math.min(1,Math.max(0,t)))*R*hR,1e-4),yn=y/rr;
+    c.copy(cB).lerp(cT,THREE.MathUtils.smoothstep(yn,-.5,.05));
+    if(cS&&yn>-.25&&t>.12&&t<.8&&Math.sin(t*72)>.3)c.lerp(cS,.7);
+    col[i*3]=c.r;col[i*3+1]=c.g;col[i*3+2]=c.b}
+  g.setAttribute("color",new THREE.BufferAttribute(col,3));
+  const model=new THREE.Group();
+  model.add(new THREE.Mesh(g,new THREE.MeshStandardMaterial({vertexColors:true,roughness:.5,metalness:.08})));
+  const surf=(t,deg)=>{const a=deg*Math.PI/180,r=prof(t)*R;return new THREE.Vector3(t-.5,r*hR*Math.sin(a),r*wR*Math.cos(a))};
+  const finM=stdMat(sp.top,{side:THREE.DoubleSide,roughness:.55});
+  const add=(geo,mat,p,s,rot)=>{const m=new THREE.Mesh(geo,mat);m.position.copy(p);m.scale.set(s[0],s[1],s[2]);if(rot)m.rotation.set(rot[0],rot[1],rot[2]);model.add(m);return m};
+  const F=sp.fin;
+  add(GEO.dorsal,finM,surf(.56,90).add(new THREE.Vector3(0,-.012,0)),[.17*F,.16*F*(sp.hammer?1.3:1),.2]);
+  add(GEO.dorsal,finM,surf(.2,90).add(new THREE.Vector3(0,-.004,0)),[.05,.045,.15]);
+  add(GEO.dorsal,finM,surf(.24,-90).add(new THREE.Vector3(0,.004,0)),[.045,.04,.15],[Math.PI,0,0]);
+  for(const s of[1,-1]){
+    const p=surf(.66,-32);p.z*=s;add(GEO.pect,finM,p,[.17*F,.21*F,.2],[s*2.05,0,0]);
+    const q=surf(.36,-60);q.z*=s;add(GEO.pect,finM,q,[.06,.07,.15],[s*2.3,0,0]);
+  }
+  const tail=new THREE.Group();tail.position.set(-.47,0,0);model.add(tail);
+  const tm=new THREE.Mesh(GEO.tail,finM);tm.scale.set(.27*sp.tail,.27*sp.tail,.18);tm.position.x=.02;tail.add(tm);
+  // eyes
+  const eyeR=R*(sp.hammer?.14:.13);
+  for(const s of[1,-1]){
+    let p;
+    if(sp.hammer)p=new THREE.Vector3(.43,.012,s*.27);
+    else{p=surf(.86,24);p.z*=s}
+    const e=new THREE.Mesh(GEO.lowSphere,M.black);e.position.copy(p);e.scale.setScalar(eyeR);model.add(e);
+    const h=new THREE.Mesh(GEO.lowSphere,M.white);h.position.copy(p).add(new THREE.Vector3(eyeR*.3,eyeR*.4,s*eyeR*.7));h.scale.setScalar(eyeR*.33);model.add(h);
+    for(let i=0;i<5;i++){const gp=surf(.73-i*.026,2);gp.z*=s;const gl=new THREE.Mesh(GEO.box,M.gill);gl.position.copy(gp);gl.position.z*=1.01;gl.scale.set(.004,R*(.55-i*.04),.01);gl.rotation.z=-.18;model.add(gl)}
+  }
+  if(sp.hammer){const hm=new THREE.Mesh(GEO.sphere,stdMat(sp.top,{roughness:.5}));hm.position.set(.43,.004,0);hm.scale.set(.065,.024,.29);model.add(hm)}
+  if(sp.spots){
+    let seed=7;const rnd=()=>{seed=(seed*16807)%2147483647;return seed/2147483647};
+    for(let i=0;i<70;i++){const t=.16+rnd()*.72,a=8+rnd()*165,p=surf(t,a);const s=new THREE.Mesh(GEO.lowSphere,M.white);s.position.copy(p);s.scale.setScalar(R*(.045+rnd()*.035));model.add(s)}
+  }
+  let jaw=null;
+  if(sp.teeth){
+    const mouthX=.355,mouthY=-.6*R;
+    const gum=new THREE.Mesh(GEO.sphere,M.gum);gum.position.set(mouthX,mouthY,0);gum.scale.set(.065,R*.2,R*.5*wR);model.add(gum);
+    const ts=sp.tooth;
+    for(let i=0;i<sp.teeth;i++){const a=-1.25+2.5*i/(sp.teeth-1);const t=new THREE.Mesh(GEO.cone,M.tooth);
+      t.position.set(mouthX+.06*Math.cos(a)*.9,mouthY-R*.1,R*.48*wR*Math.sin(a));t.scale.set(.007*ts,.022*ts,.007*ts);t.rotation.x=Math.PI;model.add(t)}
+    jaw=new THREE.Group();jaw.position.set(.3,-.66*R,0);model.add(jaw);
+    const jm=new THREE.Mesh(GEO.sphere,stdMat(sp.belly,{roughness:.55}));jm.position.set(.06,-R*.04,0);jm.scale.set(.07,R*.15,R*.52*wR);jaw.add(jm);
+    for(let i=0;i<sp.teeth-2;i++){const a=-1.15+2.3*i/(sp.teeth-3);const t=new THREE.Mesh(GEO.cone,M.tooth);
+      t.position.set(.06+.058*Math.cos(a)*.9,R*.08,R*.45*wR*Math.sin(a));t.scale.set(.006*ts,.018*ts,.006*ts);jaw.add(t)}
+    jaw.rotation.z=.04;
+  }else{
+    const m=new THREE.Mesh(GEO.sphere,M.gum);m.position.set(.488,-.12*R,0);m.scale.set(.018,R*.16,R*.6*wR);model.add(m);
+  }
+  const pitch=new THREE.Group();pitch.add(model);
+  const yaw=new THREE.Group();yaw.add(pitch);
+  const root=new THREE.Group();root.add(yaw);
+  return {key,sp,root,yaw,pitch,model,tail,jaw,len:1,phase:Math.random()*10,
+    setLen(l){this.len=l;this.model.scale.setScalar(l)}};
+}
+function swim(sh,t,speed){const w=speed||5;sh.tail.rotation.y=Math.sin(t*w+sh.phase)*.38;sh.model.rotation.y=-Math.sin(t*w+sh.phase)*.05}
+
+// extra bits for the new species, added on top of the shared shark model
+function buildShark(key){
+  const sh=makeShark(key),sp=sh.sp,m=sh.model,R=sp.R;
+  if(sp.saw){const mat=stdMat(sp.top,{roughness:.5});const b=new THREE.Mesh(GEO.box,mat);b.position.set(.66,-.01,0);b.scale.set(.36,.012,.05);m.add(b);
+    for(let i=0;i<9;i++)for(const s of[1,-1]){const t=new THREE.Mesh(GEO.cone,M.tooth);t.position.set(.5+i*.038,-.01,s*.036);t.scale.set(.008,.03,.008);t.rotation.x=s*Math.PI/2;m.add(t)}}
+  if(sp.goblin){const b=new THREE.Mesh(GEO.sphere,stdMat(sp.top,{roughness:.5}));b.position.set(.53,R*.28,0);b.scale.set(.13,.014,.05);m.add(b)}
+  if(sp.thresher){const f=new THREE.Mesh(GEO.dorsal,stdMat(sp.top,{side:THREE.DoubleSide,roughness:.55}));f.scale.set(.12,.62,.16);f.rotation.z=1.05;f.position.set(-.02,.03,0);sh.tail.add(f)}
+  if(sp.glow){const gm=new THREE.MeshBasicMaterial({color:0x7dfcff});for(let i=0;i<14;i++)for(const s of[1,-1]){const d=new THREE.Mesh(GEO.lowSphere,gm);const t=.2+i*.045,a=(-70+((i%3)*18))*Math.PI/180,r=(t<.6?(.1+.9*Math.pow(Math.sin(t/.6*Math.PI/2),1.5)):Math.pow(Math.max(0,1-Math.pow((t-.6)/.4,sp.nose)),.5))*R;
+      d.position.set(t-.5,r*Math.sin(a),s*r*.82*Math.cos(a));d.scale.setScalar(.008);m.add(d)}}
+  // glowing eyes for the scary reveal
+  const em=new THREE.MeshBasicMaterial({color:0xfff27a});sh.eyes=[];
+  for(const s of[1,-1]){const e=new THREE.Mesh(GEO.lowSphere,em);e.position.set(sp.hammer?.435:.37,sp.hammer?.012:R*.38,s*(sp.hammer?.275:R*.62*(sp.wide?1.05:.82)));e.scale.setScalar(R*.15);e.visible=false;m.add(e);sh.eyes.push(e)}
+  sh.root.scale.setScalar(Math.max(1.05,sp.size)*3);
+  return sh;
+}
+
+function rr(x,a,b,w,h,r){x.beginPath();x.moveTo(a+r,b);x.arcTo(a+w,b,a+w,b+h,r);x.arcTo(a+w,b+h,a,b+h,r);x.arcTo(a,b+h,a,b,r);x.arcTo(a,b,a+w,b,r);x.closePath()}
+function textTex(txt,o){o=o||{};const c=document.createElement("canvas");c.width=c.height=256;const x=c.getContext("2d");
+  if(o.bubble){const g=x.createRadialGradient(128,128,20,128,128,124);g.addColorStop(0,"rgba(20,60,90,.95)");g.addColorStop(.78,"rgba(20,90,130,.9)");g.addColorStop(.9,"rgba(125,252,255,.95)");g.addColorStop(1,"rgba(125,252,255,0)");x.fillStyle=g;x.beginPath();x.arc(128,128,124,0,7);x.fill()}
+  else{x.fillStyle=o.bg||"#07182c";rr(x,8,44,240,168,34);x.fill();x.lineWidth=12;x.strokeStyle=o.edge||"#ffd25a";x.stroke()}
+  x.fillStyle=o.color||"#ffffff";x.textAlign="center";x.textBaseline="middle";
+  const s=String(txt);x.font=`700 ${o.size||(s.length>1?120:150)}px Andika,"Comic Sans MS",Arial,sans-serif`;x.fillText(s,128,o.bubble?122:132);
+  const t=new THREE.CanvasTexture(c);t.anisotropy=4;return t}
+function sprite(txt,o,scale){const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:textTex(txt,o),transparent:true,depthWrite:false,fog:false}));sp.scale.setScalar(scale||1.8);return sp}
+function killObj(o){if(!o)return;if(o.parent)o.parent.remove(o);o.traverse(n=>{if(n.isSprite&&n.material){if(n.material.map)n.material.map.dispose();n.material.dispose()}})}
+
+let beach,sea,camB,camS,truck,sub,world="beach",mode="home",T=0;
+const LANES=[-2.1,0,2.1];
+const scenery=[],bursts=[];
+let showL=null,groundTex=null,subLight=null,seaAmb=null,snow=null,cageEyes=null,shadowShark=null,cone=null;
+
+function initWorlds(){
+  initGeo();initMats();
+  // ----- beach at night -----
+  beach=new THREE.Scene();beach.background=new THREE.Color(0x060b1c);beach.fog=new THREE.Fog(0x060b1c,22,78);
+  camB=new THREE.PerspectiveCamera(60,1,.1,200);
+  beach.add(new THREE.HemisphereLight(0x8fa8ff,0x1a1630,.55));
+  const moonL=new THREE.DirectionalLight(0xbfd0ff,.75);moonL.position.set(-6,12,-4);beach.add(moonL);
+  const c=document.createElement("canvas");c.width=64;c.height=256;const x=c.getContext("2d");
+  x.fillStyle="#3a3f5c";x.fillRect(0,0,64,256);x.fillStyle="#4a5075";for(let i=0;i<40;i++)x.fillRect(Math.random()*64,Math.random()*256,2,2);
+  x.fillStyle="#c9b77a";x.fillRect(20,20,3,90);x.fillRect(41,20,3,90);x.fillRect(20,150,3,90);x.fillRect(41,150,3,90);
+  groundTex=new THREE.CanvasTexture(c);groundTex.wrapS=groundTex.wrapT=THREE.RepeatWrapping;groundTex.repeat.set(1,14);
+  const road=new THREE.Mesh(new THREE.PlaneGeometry(7.4,160),new THREE.MeshStandardMaterial({map:groundTex,roughness:1}));road.rotation.x=-Math.PI/2;road.position.z=-60;beach.add(road);
+  const sand=new THREE.Mesh(new THREE.PlaneGeometry(200,200),stdMat(0x2b2d47,{roughness:1}));sand.rotation.x=-Math.PI/2;sand.position.set(0,-.02,-60);beach.add(sand);
+  const water=new THREE.Mesh(new THREE.PlaneGeometry(120,200),new THREE.MeshStandardMaterial({color:0x0a2a55,roughness:.25,metalness:.6,emissive:0x04162e}));water.rotation.x=-Math.PI/2;water.position.set(-72,.02,-60);beach.add(water);
+  const moon=new THREE.Mesh(GEO.sphere,new THREE.MeshBasicMaterial({color:0xfff3c4,fog:false}));moon.position.set(-16,22,-90);moon.scale.setScalar(4.5);beach.add(moon);
+  const sg=new THREE.BufferGeometry(),sv=[];for(let i=0;i<260;i++)sv.push(rnd(-120,120),rnd(8,70),rnd(-120,-60));sg.setAttribute("position",new THREE.Float32BufferAttribute(sv,3));
+  beach.add(new THREE.Points(sg,new THREE.PointsMaterial({color:0xffffff,size:.5,fog:false})));
+  // scenery that scrolls past: palms, rocks, wreck ribs, glowing eyes
+  const dark=stdMat(0x141a2c,{roughness:1}),leaf=stdMat(0x153126,{roughness:1}),wood=stdMat(0x2c2219,{roughness:1}),eyeM=new THREE.MeshBasicMaterial({color:0xfff27a});
+  for(let i=0;i<34;i++){const g=new THREE.Group(),k=i%6,side=i%2?1:-1;
+    if(k<2){const tr=new THREE.Mesh(new THREE.CylinderGeometry(.14,.22,4,6),wood);tr.position.y=2;tr.rotation.z=rnd(-.2,.2);g.add(tr);for(let j=0;j<5;j++){const l=new THREE.Mesh(GEO.cone,leaf);l.scale.set(.35,2.2,.35);l.position.y=4;l.rotation.set(1.9,j*1.26,0);l.translateY(-.9);g.add(l)}}
+    else if(k<4){const r=new THREE.Mesh(GEO.lowSphere,dark);r.scale.set(rnd(.7,1.8),rnd(.5,1.3),rnd(.7,1.6));g.add(r)}
+    else if(k===4){for(let j=0;j<5;j++){const b=new THREE.Mesh(GEO.box,wood);b.scale.set(.18,rnd(1.6,3),.18);b.position.set(0,1,j*.9);b.rotation.z=.5*side;g.add(b)}const keel=new THREE.Mesh(GEO.box,wood);keel.scale.set(.4,.4,4.6);keel.position.set(0,.2,1.8);g.add(keel)}
+    else{const b=new THREE.Mesh(GEO.lowSphere,dark);b.scale.set(1.5,1.1,1.3);g.add(b);const ey=new THREE.Group();for(const s of[1,-1]){const e=new THREE.Mesh(GEO.lowSphere,eyeM);e.scale.setScalar(.09);e.position.set(s*.22,.75,1.1);ey.add(e)}g.add(ey);g.userData.eyes=ey}
+    g.position.set(side*rnd(5.2,13),0,-i*2.8+8);beach.add(g);scenery.push(g)}
+  truck=makeTruck();beach.add(truck.root);
+  for(let i=0;i<36;i++){const m=new THREE.Mesh(GEO.lowSphere,new THREE.MeshBasicMaterial({color:0xffd25a}));m.visible=false;m.userData.v=new THREE.Vector3();m.userData.life=0;bursts.push(m)}
+  // ----- under the sea -----
+  sea=new THREE.Scene();sea.background=new THREE.Color(0x020814);sea.fog=new THREE.Fog(0x020814,9,34);
+  camS=new THREE.PerspectiveCamera(55,1,.1,120);camS.position.set(0,0,11);
+  seaAmb=new THREE.AmbientLight(0x4a6aa0,.45);sea.add(seaAmb);
+  const top=new THREE.DirectionalLight(0x6aa0ff,.35);top.position.set(2,10,6);sea.add(top);
+  subLight=new THREE.PointLight(0xfff0b0,1.5,13,1.6);sea.add(subLight);
+  showL=new THREE.DirectionalLight(0xffffff,0);showL.position.set(1,3,10);sea.add(showL);
+  sub=makeSub();sea.add(sub.root);
+  const pg=new THREE.BufferGeometry(),pv=[];for(let i=0;i<220;i++)pv.push(rnd(-14,14),rnd(-9,9),rnd(-12,4));pg.setAttribute("position",new THREE.Float32BufferAttribute(pv,3));
+  snow=new THREE.Points(pg,new THREE.PointsMaterial({color:0x9fd8ff,size:.07,transparent:true,opacity:.6}));sea.add(snow);
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(80,40),stdMat(0x0c1a26,{roughness:1}));floor.rotation.x=-Math.PI/2;floor.position.y=-6.2;sea.add(floor);
+  for(let i=0;i<16;i++){const k=new THREE.Mesh(GEO.cone,stdMat(0x0f3a2c,{roughness:1}));k.scale.set(.25,rnd(2,5),.25);k.position.set(rnd(-13,13),-6.2+k.scale.y/2,rnd(-9,-1));sea.add(k);k.userData.sway=rnd(0,6);scenery.push(k);k.userData.kelp=true}
+  for(let i=0;i<8;i++){const r=new THREE.Mesh(GEO.lowSphere,stdMat(0x101c2a,{roughness:1}));r.scale.set(rnd(1,3),rnd(.8,2),rnd(1,2));r.position.set(rnd(-13,13),-6,rnd(-10,-2));sea.add(r)}
+  cageEyes=new THREE.Group();for(const s of[1,-1]){const e=new THREE.Mesh(GEO.lowSphere,new THREE.MeshBasicMaterial({color:0xfff27a,fog:false}));e.scale.setScalar(.16);e.position.x=s*.5;cageEyes.add(e)}cageEyes.position.set(0,1,-7);sea.add(cageEyes);
+  for(let i=0;i<24;i++){const m=new THREE.Mesh(GEO.lowSphere,new THREE.MeshBasicMaterial({color:0x9fe7ff,transparent:true,opacity:.8}));m.visible=false;m.userData.v=new THREE.Vector3();m.userData.life=0;m.userData.sea=true;bursts.push(m);sea.add(m)}
+  bursts.filter(b=>!b.userData.sea).forEach(b=>beach.add(b));
+  onResize();
+}
+
+function makeTruck(){
+  const root=new THREE.Group(),body=new THREE.Group();root.add(body);
+  const paint=stdMat(0x2f6fde,{roughness:.35,metalness:.3}),black=stdMat(0x0d0f14,{roughness:.9}),chrome=stdMat(0xb9c4d0,{roughness:.2,metalness:.9});
+  const add=(geo,mat,p,s,par)=>{const m=new THREE.Mesh(geo,mat);m.position.set(p[0],p[1],p[2]);m.scale.set(s[0],s[1],s[2]);(par||body).add(m);return m};
+  add(GEO.box,paint,[0,1.25,0],[1.7,.6,2.8]);add(GEO.box,paint,[0,1.8,.25],[1.4,.6,1.2]);
+  add(GEO.box,new THREE.MeshBasicMaterial({color:0x8fe3ff}),[0,1.82,-.37],[1.2,.36,.04]);
+  add(GEO.box,chrome,[0,.95,-1.45],[1.8,.2,.2]);add(GEO.box,chrome,[0,.95,1.45],[1.8,.2,.2]);
+  add(GEO.box,new THREE.MeshBasicMaterial({color:0x183a66}),[0,1.84,.86],[1.15,.34,.04]);
+  for(const s of[1,-1])add(GEO.box,new THREE.MeshBasicMaterial({color:0xff3b30}),[s*.68,1.3,1.41],[.26,.16,.04]);
+  for(const s of[1,-1])add(GEO.lowSphere,new THREE.MeshBasicMaterial({color:0xfff6c8}),[s*.6,1.25,-1.42],[.16,.16,.06]);
+  const wheels=[],wg=new THREE.CylinderGeometry(.62,.62,.5,14);wg.rotateZ(Math.PI/2);
+  for(const sx of[1,-1])for(const sz of[1,-1]){const w=new THREE.Mesh(wg,black);w.position.set(sx*1.02,.62,sz*.95);root.add(w);const hub=new THREE.Mesh(GEO.lowSphere,chrome);hub.scale.set(.1,.24,.24);hub.position.x=sx*.26;w.add(hub);wheels.push(w)}
+  const head=new THREE.SpotLight(0xfff2c0,1.6,34,.5,.6,1);head.position.set(0,1.4,-1.4);head.target.position.set(0,.2,-14);root.add(head);root.add(head.target);
+  const P={};
+  P.fin=add(GEO.dorsal,stdMat(0x7a8893,{side:THREE.DoubleSide}),[0,2.1,.3],[.9,.8,1]);P.fin.rotation.y=Math.PI/2;
+  P.lights=new THREE.Group();for(let i=0;i<4;i++)add(GEO.lowSphere,new THREE.MeshBasicMaterial({color:0xfff27a}),[-.45+i*.3,2.2,-.3],[.11,.11,.11],P.lights);add(GEO.box,black,[0,2.14,-.3],[1.2,.06,.14],P.lights);body.add(P.lights);
+  P.teeth=new THREE.Group();for(let i=0;i<7;i++){const t=add(GEO.cone,M.tooth,[-.72+i*.24,.78,-1.5],[.09,.24,.09],P.teeth);t.rotation.x=Math.PI}body.add(P.teeth);
+  P.spikes=new THREE.Group();for(const s of[1,-1])for(let i=0;i<5;i++){const t=add(GEO.cone,chrome,[s*.92,1.25,-1+i*.5],[.08,.3,.08],P.spikes);t.rotation.z=-s*Math.PI/2}body.add(P.spikes);
+  P.flag=new THREE.Group();add(new THREE.CylinderGeometry(.03,.03,1.6,5),chrome,[.6,2.5,1.2],[1,1,1],P.flag);add(GEO.box,black,[.6,3.05,1.55],[.02,.45,.7],P.flag);add(GEO.lowSphere,M.white,[.62,3.07,1.55],[.02,.1,.1],P.flag);body.add(P.flag);
+  P.flames=new THREE.Group();for(const s of[1,-1])for(let i=0;i<3;i++){const f=add(GEO.cone,new THREE.MeshBasicMaterial({color:i%2?0xffd25a:0xff7a2a}),[s*.87,1.2,-.9+i*.55],[.02,.7-i*.12,.2],P.flames);f.rotation.x=-Math.PI/2}body.add(P.flames);
+  return {root,body,wheels,paint,P};
+}
+function applyParts(){
+  const has=id=>S.parts.includes(id)&&!S.off[id];
+  for(const k of["fin","lights","teeth","spikes","flag","flames"])truck.P[k].visible=has(k);
+  truck.paint.color.setHex(has("gold")?0xf4c430:has("flames")?0xd83a22:0x2f6fde);
+  const big=has("wheels")?1.28:1;truck.wheels.forEach(w=>{w.scale.setScalar(big);w.position.y=.62*big});truck.body.position.y=(big-1)*.62;
+}
+function makeSub(){
+  const root=new THREE.Group(),g=new THREE.Group();root.add(g);
+  const y=stdMat(0xffc531,{roughness:.35,metalness:.2}),d=stdMat(0x2a3140,{roughness:.6});
+  const b=new THREE.Mesh(GEO.sphere,y);b.scale.set(1,.6,.6);g.add(b);
+  const t=new THREE.Mesh(GEO.box,y);t.scale.set(.5,.4,.4);t.position.y=.62;g.add(t);
+  const pe=new THREE.Mesh(GEO.box,d);pe.scale.set(.08,.5,.08);pe.position.set(.1,1,0);g.add(pe);
+  const w=new THREE.Mesh(GEO.sphere,new THREE.MeshBasicMaterial({color:0x9ff3ff}));w.scale.set(.3,.3,.12);w.position.set(.45,.08,.52);g.add(w);
+  const prop=new THREE.Mesh(GEO.box,d);prop.scale.set(.06,.8,.14);prop.position.x=-1.05;g.add(prop);
+  const lamp=new THREE.Mesh(GEO.lowSphere,new THREE.MeshBasicMaterial({color:0xfff6c8}));lamp.scale.setScalar(.14);lamp.position.set(1,0,0);g.add(lamp);
+  cone=new THREE.Mesh(new THREE.ConeGeometry(1.5,5,20,1,true),new THREE.MeshBasicMaterial({color:0xffe27a,transparent:true,opacity:.08,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending}));
+  cone.rotation.z=Math.PI/2;cone.position.x=3.4;g.add(cone);
+  root.scale.setScalar(.8);
+  return {root,g,prop,dir:1};
+}
+function burst(pos,color,n,inSea){let k=0;for(const b of bursts){if(!!b.userData.sea!==!!inSea||b.userData.life>0)continue;b.visible=true;b.position.copy(pos);b.material.color.setHex(color);b.scale.setScalar(rnd(.08,.2));
+  b.userData.v.set(rnd(-4,4),rnd(inSea?-1:2,inSea?4:7),rnd(-3,3));b.userData.life=rnd(.5,1);if(++k>=(n||14))break}}
+
+function onResize(){if(!renderer)return;const w=innerWidth,h=innerHeight,a=w/h;
+  renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.setSize(w,h,false);
+  camB.aspect=camS.aspect=a;camB.fov=a>1?58:70;camB.updateProjectionMatrix();
+  camS.fov=a>1?55:70;camS.updateProjectionMatrix();placeRunCam()}
+function placeRunCam(){const a=camB.aspect,hf=2*Math.atan(Math.tan(camB.fov*Math.PI/360)*a),d=clamp(3.7/Math.tan(hf/2),7,15);
+  camB.userData.d=d;camB.position.set(0,d*.5,d*.92);camB.lookAt(0,.9,-d*.75)}
+function seaBounds(){const hh=Math.tan(camS.fov*Math.PI/360)*camS.position.z;return {hw:hh*camS.aspect,hh}}
+addEventListener("resize",onResize);addEventListener("orientationchange",()=>setTimeout(onResize,200));
+
+// ---------- screens ----------
+function show(html,dim,low){const u=$("ui");u.classList.toggle("low",!!low);u.innerHTML=`<div class="panel">${html}</div>`;u.hidden=false;u.classList.toggle("dim",dim!==false)}
+function hideUI(){$("ui").hidden=true;$("ui").innerHTML=""}
+function hud(on){$("hud").hidden=!on}
+function fade(fn){const f=$("fade");f.classList.add("on");setTimeout(()=>{fn();setTimeout(()=>f.classList.remove("on"),80)},360)}
+let repeatLine="",paused=false;
+function later(fn,ms,m){setTimeout(function tick(){if(paused)return setTimeout(tick,300);if(mode!==m)return;fn()},ms)}
+function fitQ(){const q=$("q");q.style.fontSize="";let n=0;while(q.scrollWidth>q.clientWidth+1&&n++<14)q.style.fontSize=(parseFloat(getComputedStyle(q).fontSize)*.9)+"px"}
+$("spk").onclick=()=>{if(repeatLine)say(repeatLine)};
+$("quit").onclick=()=>{if(paused)return;const was=mode;mode="idle";paused=true;hush();
+  show(`<h2>Stop?</h2><div class="row"><button class="big go" id="no">▶ Keep going</button><button class="btn" id="yes">🏠 Home</button></div>`);
+  $("no").onclick=()=>{hideUI();mode=was;paused=false;if(repeatLine)say(repeatLine)};$("yes").onclick=()=>{paused=false;fade(home)}};
+
+function offered(){const left=ORDER.filter(k=>!S.rescued.includes(k));const normal=left.filter(k=>!SPECIES[k].boss);return normal.length?normal.slice(0,2):left.slice(0,1)}
+function lockedToday(){return S.daily&&S.lastDay===today()}
+
+function home(){
+  mode="home";world="beach";hud(false);hush();applyParts();clearRun();truck.root.position.set(0,0,0);truck.root.rotation.set(0,0,0);
+  const off=offered(),done=!off.length,locked=lockedToday();
+  const label=locked?"🌙 Come back tomorrow night!":done?"▶ Bonus night":`▶ Night ${S.nights+1}`;
+  show(`<h1>Shark Island<small>AFTER DARK</small></h1>
+   <button class="big ${locked?"":"go"}" id="play">${label}</button>
+   ${locked?`<button class="btn" id="prac">🔁 Play a night again</button>`:""}
+   <div class="row"><button class="btn" id="gar">🚙 Garage</button><button class="btn" id="book">🦈 Shark Book ${S.rescued.length}/${ORDER.length}</button></div>
+   <button class="btn ghost grown" id="grown">Grown-ups: hold</button>
+   <a href="index.html" class="note" style="color:#9fe7ff">Back to Reading Games</a>`,false);
+  $("play").onclick=()=>{if(locked){say("Come back tomorrow night, "+rangerName()+". A new shark will need you.");return}choose(false)};
+  if($("prac"))$("prac").onclick=()=>choose(true);
+  $("gar").onclick=garage;$("book").onclick=book;
+  holdButton($("grown"),grownUps);
+}
+function holdButton(b,fn){let tm=0;const stop=()=>{clearTimeout(tm);b.classList.remove("holding")};
+  b.addEventListener("pointerdown",e=>{e.preventDefault();b.classList.add("holding");tm=setTimeout(()=>{stop();fn()},1200)});
+  ["pointerup","pointerleave","pointercancel"].forEach(ev=>b.addEventListener(ev,stop))}
+
+let N=null; // tonight's mission
+function choose(practice){
+  let keys=practice?shuffle(S.rescued.slice()).slice(0,2):offered();
+  if(!keys.length)keys=shuffle(ORDER.slice()).slice(0,2); // bonus nights after all seven
+  const bonus=!practice&&!offered().length;
+  if(keys.length===1)return radio(keys[0],practice,bonus);
+  show(`<h2>Who needs help tonight?</h2><div class="cards">${keys.map(k=>`<button class="card" data-k="${k}"><span class="emo">${SPECIES[k].emo}</span><span>${cap(SPECIES[k].place.replace(/^the /,""))}</span></button>`).join("")}</div>`);
+  say(`Two calls tonight. ${cap(SPECIES[keys[0]].place)}, or ${SPECIES[keys[1]].place}. Tap one.`);
+  document.querySelectorAll(".card").forEach(c=>c.onclick=()=>radio(c.dataset.k,practice,bonus));
+}
+const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+function radio(key,practice,bonus){
+  const sp=SPECIES[key];let sur=SURPRISES[(SURPRISES.indexOf(S.lastSurprise)+1)%SURPRISES.length];
+  N={key,sp,practice,bonus,surprise:sur};
+  const line=`Kia ora, ${rangerName()}! ${sp.trouble} Drive to the dock. Jump the ramps!`;
+  show(`<div class="radio">📻</div><p>${line}</p><button class="big go" id="go">GO!</button>`);say(line);sfx.pop();
+  $("go").onclick=()=>fade(stageRamps);
+}
+
+// ---------- number questions ----------
+function numMax(){return [10,10,20,30][S.numLvl]||10}
+function makeQ(type){
+  const mx=numMax();let show,ans,voice;
+  if(type==="missing"){const a=ri(1,mx-3),hide=S.numLvl===1?ri(2,3):ri(1,3);ans=a+hide;show=[0,1,2,3].map(i=>i===hide?"?":a+i).join(", ");voice="Which number is missing?"}
+  else if(type==="start"){const a=ri(S.numLvl===1?3:6,mx-2);ans=a+2;show=`${a}, ${a+1}, ?`;voice=`Count on from ${a}.`}
+  else if(type==="find"){ans=ri(1,mx);show="🔊 ?";voice=`Find number ${ans}.`}
+  else if(type==="plus"){const a=ri(0,10),b=Math.random()<.7?1:0,flip=Math.random()<.25;ans=a+b;show=flip?`${b} + ${a} = ?`:`${a} + ${b} = ?`;voice=flip?`${b} plus ${a}`:`${a} plus ${b}`}
+  else{const step=Math.random()<.5?2:5,n=ri(1,step===2?4:(S.numLvl>1?5:3));const seq=[];for(let i=1;i<=n;i++)seq.push(i*step);ans=(n+1)*step;show=seq.join(", ")+", ?";voice=`Count by ${step===2?"twos":"fives"}.`;type="skip"+step}
+  const opts=new Set([ans]);const cand=shuffle([ans+1,ans-1,ans+2,ans-2,ans+10,ans-10,ans+5]).filter(v=>v>=0&&v<=Math.max(mx,ans+2));
+  for(const v of cand){if(opts.size>=3)break;opts.add(v)}let g=ans+3;while(opts.size<3)opts.add(g++);
+  return {type,show,ans,voice,opts:shuffle([...opts]),missed:false};
+}
+function pickType(types){const w=types.map(t=>1+Math.min(4,((S.stat.n[t]||{}).miss||0)-((S.stat.n[t]||{}).ok||0)*.3));
+  let r=Math.random()*w.reduce((a,b)=>a+Math.max(.4,b),0);for(let i=0;i<types.length;i++){r-=Math.max(.4,w[i]);if(r<=0)return types[i]}return types[0]}
+function numResult(q){note("n",q.type,!q.missed);
+  if(q.missed){S.nrun=Math.min(0,S.nrun)-1;if(S.nrun<=-3&&S.numLvl>1){S.numLvl--;S.nrun=0}}
+  else{S.nrun=Math.max(0,S.nrun)+1;if(S.nrun>=5&&S.numLvl<3){S.numLvl++;S.nrun=0}}save()}
+
+// ---------- truck run ----------
+let R=null;
+function clearRun(){if(R&&R.row)R.row.forEach(o=>killObj(o.g));R=null}
+function obstacle(theme,val){
+  const g=new THREE.Group();
+  if(theme==="ramp"){const m=new THREE.Mesh(GEO.box,stdMat(0xff8a2a,{roughness:.6,emissive:0x3a1400}));m.scale.set(1.75,.22,2.8);m.rotation.x=.3;m.position.y=.5;g.add(m);
+    for(const s of[1,-1]){const st=new THREE.Mesh(GEO.box,new THREE.MeshBasicMaterial({color:0xffd25a}));st.scale.set(.1,.24,2.8);st.rotation.x=.3;st.position.set(s*.82,.52,0);g.add(st)}}
+  else if(theme==="barrel"){for(const p of[[-.45,.45],[.45,.45],[0,1.2]]){const b=new THREE.Mesh(new THREE.CylinderGeometry(.42,.42,.85,12),stdMat(0xc8322a,{roughness:.5,emissive:0x2a0603}));b.position.set(p[0],p[1],0);g.add(b)}}
+  else if(theme==="fuel"){const b=new THREE.Mesh(GEO.box,stdMat(0x2fbf5b,{roughness:.4,emissive:0x0d4a1e}));b.scale.set(1,1.2,.5);b.position.y=.75;g.add(b);const c=new THREE.Mesh(GEO.box,stdMat(0x111111));c.scale.set(.25,.2,.25);c.position.set(.25,1.45,0);g.add(c)}
+  else{const b=new THREE.Mesh(GEO.box,stdMat(0x8a6238,{roughness:.9}));b.scale.set(1.3,1.3,1.3);b.position.y=.65;b.rotation.y=rnd(-.3,.3);g.add(b)}
+  if(val!==null&&val!==undefined){const s=sprite(val,{},2.05);s.position.y=theme==="barrel"?2.75:2.55;g.add(s)}
+  return g;
+}
+function startRun(o){ // o:{theme,types,count,intro,onDone} or {free:true,secs,onDone}
+  clearRun();world="beach";mode="run";applyParts();placeRunCam();hideUI();hud(true);
+  R=Object.assign({lane:1,x:0,row:null,z:0,speed:9,boost:false,state:"gap",t:0,qi:0,q:null,jump:0,jumpKind:"",bump:0,left:o.secs||0,gap:1.2},o);
+  truck.root.position.set(0,0,0);truck.root.rotation.set(0,0,0);
+  if(o.free){$("q").innerHTML=`<span class="ask">Free drive!</span>`;repeatLine="Free drive! Jump the ramps and smash the boxes!";say(repeatLine);sfx.vroom()}
+  else{$("q").textContent="";repeatLine=o.intro;say(o.intro);sfx.vroom();R.gap=2.6}
+  dots();
+}
+function dots(){if(!R)return;$("qsub").textContent=R.free?("⏱ "+Math.max(0,Math.ceil(R.left))):Array.from({length:R.count},(_,i)=>i<R.qi?"●":"○").join("")}
+function nextRow(){
+  if(R.free){const lanes=shuffle([0,1,2]),n=ri(1,2);R.row=lanes.map((l,i)=>{const kind=i<n?"ramp":(Math.random()<.7?"crate":null);if(!kind)return null;const g=obstacle(kind,null);g.position.set(LANES[l],0,-44);beach.add(g);return {g,lane:l,kind,alive:true}}).filter(Boolean)}
+  else{const q=R.q=makeQ(pickType(R.types));$("q").innerHTML=q.show.replace("?",`<span class="ask">?</span>`);fitQ();repeatLine=q.voice;say(q.voice);dots();
+    R.row=q.opts.map((v,l)=>{const g=obstacle(R.theme,v);g.position.set(LANES[l],0,-44);beach.add(g);return {g,lane:l,val:v,kind:R.theme,alive:true}})}
+  R.z=-44;R.state="approach";R.boost=false;
+}
+function setLane(l){if(!R||mode!=="run")return;l=clamp(l,0,2);if(l===R.lane&&R.state==="approach")R.boost=true;R.lane=l}
+function hitRow(){
+  const o=R.row.find(r=>r.alive&&r.lane===R.lane),p=truck.root.position.clone();p.y=1.2;
+  if(R.free){if(o){if(o.kind==="ramp"){R.jump=.001;R.jumpKind="flip";sfx.boing()}else{sfx.crash();burst(p,0xc8935a,16);o.g.visible=false;o.alive=false;R.bump=.3}}
+    R.state="pass";return}
+  const q=R.q;
+  if(o&&o.val===q.ans){
+    R.state="pass";sfx.yay();say(pick(["Yes!","Awesome!","You got it!","Sweet as!"])+" "+q.ans+".");numResult(q);R.qi++;dots();
+    if(R.theme==="ramp"){R.jump=.001;R.jumpKind="flip"}
+    else if(R.theme==="barrel"){sfx.crash();burst(p,0xff6b4a,22);o.g.visible=false;R.jump=.001;R.jumpKind="hop"}
+    else{sfx.glug();burst(p,0x8cf08a,18);o.g.visible=false;R.jump=.001;R.jumpKind="wheelie"}
+    R.row.forEach(r=>{if(r!==o)r.g.visible=false});
+  }else{
+    q.missed=true;sfx.boing();R.bump=.5;if(o){o.alive=false;o.g.visible=false;burst(p,0x9fb0c8,8)}
+    R.z=-26;R.boost=false;R.row.forEach(r=>r.g.position.z=R.z);
+    const left=R.row.filter(r=>r.alive);if(left.length===1)R.lane=left[0].lane; // last one standing: steer him there
+    say("Oops! Try again. "+q.voice);
+  }
+}
+function updateRun(dt){
+  const sp=R.speed*(R.boost?2.6:1)*(R.state==="gap"?1.2:1);
+  groundTex.offset.y+=sp*dt/(160/14);
+  for(const g of scenery){if(g.userData.kelp)continue;g.position.z+=sp*dt;if(g.position.z>14)g.position.z-=95;
+    if(g.userData.eyes){g.userData.eyes.visible=S.scary>1;g.userData.eyes.scale.y=(Math.sin(T*1.3+g.position.x)>.93)?.1:1}}
+  truck.wheels.forEach(w=>w.rotation.x-=sp*dt/.62);
+  R.x+=(LANES[R.lane]-R.x)*Math.min(1,dt*9);truck.root.position.x=R.x;truck.root.rotation.z=(LANES[R.lane]-R.x)*-.08;
+  truck.body.rotation.x=Math.sin(T*30)*.004;
+  if(R.jump>0){R.jump+=dt/(R.jumpKind==="flip"?1.05:.7);const t=Math.min(1,R.jump);
+    truck.root.position.y=Math.sin(Math.PI*t)*(R.jumpKind==="flip"?3:R.jumpKind==="hop"?1.1:.3);
+    truck.root.rotation.x=R.jumpKind==="flip"?Math.PI*2*t:R.jumpKind==="wheelie"?Math.sin(Math.PI*t)*.45:0;
+    if(t>=1){R.jump=0;truck.root.position.y=0;truck.root.rotation.x=0;burst(truck.root.position,0xd8c48a,6)}}
+  if(R.bump>0){R.bump-=dt;truck.root.position.y=Math.abs(Math.sin(R.bump*22))*.25;truck.root.rotation.y=Math.sin(R.bump*30)*.08;if(R.bump<=0){truck.root.rotation.y=0;if(!R.jump)truck.root.position.y=0}}
+  camB.position.x=R.x*.35;
+  if(R.free){R.left-=dt;dots();if(R.left<=0){const f=R.onDone;mode="idle";return f()}}
+  if(R.state==="gap"){R.gap-=dt;if(R.gap<=0){if(!R.free&&R.qi>=R.count){const f=R.onDone;mode="idle";return f()}nextRow()}}
+  else if(R.state==="approach"){R.z+=sp*dt;R.row.forEach(r=>r.g.position.z=R.z);if(R.z>=-1.7)hitRow()}
+  else if(R.state==="pass"){R.z+=sp*dt;R.row.forEach(r=>r.g.position.z=R.z);if(R.z>12){R.row.forEach(r=>killObj(r.g));R.row=null;R.state="gap";R.gap=R.free?.5:1}}
+}
+
+// ---------- mission stages ----------
+function stageRamps(){startRun({theme:"ramp",types:["missing","start","find"],count:5,intro:"Jump the right ramp! Tap the side you want.",onDone:()=>fade(stageSurprise)})}
+function stageSurprise(){
+  const s=N.surprise;S.lastSurprise=s;save();
+  if(s==="map")return stageMap();
+  if(s==="fuel")return startRun({theme:"fuel",types:["plus"],count:4,intro:"Fill up the tank! Grab the right fuel can.",onDone:()=>fade(stageDive)});
+  startRun({theme:"barrel",types:["skip"],count:4,intro:"Smash the right barrels!",onDone:()=>fade(stageDive)});
+}
+function stageMap(){
+  mode="map";hud(false);clearRun();
+  const rows="ABCD",icons=["🌴","🪨","⚓","🏚️","🔥","🦀","🚩","🌋"];let round=0;
+  const cells={};shuffle([..."ABCD"].flatMap(r=>[1,2,3,4].map(c=>r+c))).slice(0,icons.length).forEach((k,i)=>cells[k]=icons[i]);
+  function draw(){
+    const target=pick([..."ABCD"])+ri(1,4);let miss=0;
+    show(`<h2>Find <span style="color:#fff;font-family:var(--read)">${target}</span></h2>
+      <div class="map"><div class="h"></div>${[1,2,3,4].map(c=>`<div class="h" data-c="${c}">${c}</div>`).join("")}
+      ${[...rows].map(r=>`<div class="h" data-r="${r}">${r}</div>`+[1,2,3,4].map(c=>`<button class="c" data-k="${r}${c}">${cells[r+c]||""}</button>`).join("")).join("")}</div>
+      <button class="btn" id="again">🔊</button>`);
+    const line=`A fin was seen at ${target[0]} ${target[1]}. Tap ${target[0]} ${target[1]} on the map.`;say(round?`Now find ${target[0]} ${target[1]}.`:line);
+    $("again").onclick=()=>say(`Tap ${target[0]} ${target[1]}.`);
+    document.querySelectorAll(".map .c").forEach(b=>b.onclick=()=>{
+      const k=b.dataset.k;
+      if(k===target){b.classList.add("yes");b.textContent="🦈";sfx.yay();note("n","map",miss===0);save();say("Yes! "+target[0]+" "+target[1]+".");round++;setTimeout(()=>round>=3?fade(stageDive):draw(),1300)}
+      else{miss++;b.classList.remove("no");void b.offsetWidth;b.classList.add("no");sfx.nope();say(`That is ${k[0]} ${k[1]}. Find ${target[0]} ${target[1]}.`);
+        document.querySelector(`.map .h[data-r="${target[0]}"]`).classList.add("hint");if(miss>1)document.querySelector(`.map .h[data-c="${target[1]}"]`).classList.add("hint")}
+    });
+  }
+  draw();
+}
+
+// ---------- submarine dive: finish the word ----------
+let D=null;
+function pickWords(n){const ws=WORDS().filter(w=>w.length>=(S.wordLvl>1?3:2));const w=ws.map(x=>({x,k:Math.random()*(1+Math.min(4,((S.stat.w[x]||{}).miss||0)))}));
+  return w.sort((a,b)=>b.k-a.k).slice(0,n).map(o=>o.x)}
+function stageDive(){
+  clearRun();world="sea";mode="dive";hideUI();hud(true);
+  if(D)D.bubbles.forEach(b=>killObj(b.s));if(V&&V.sh){sea.remove(V.sh.root);V=null}
+  D={words:pickWords(N.sp.boss?5:3),wi:0,bubbles:[],aim:null,tx:-2,ty:-1,x:-3,y:-1,busy:1.8,miss:0,shark:null};
+  sub.root.position.set(D.x,D.y,0);sub.root.visible=true;showL.intensity=0;cageEyes.visible=S.scary>1;seaAmb.intensity=[.7,.7,.45,.3][S.scary];subLight.intensity=1.5;
+  if(shadowShark){sea.remove(shadowShark.root);shadowShark=null}
+  if(S.scary>1){shadowShark=buildShark("megalodon");shadowShark.root.scale.setScalar(13);shadowShark.root.position.set(-40,2,-16);shadowShark.model.traverse(m=>{if(m.isMesh)m.material=M.black});sea.add(shadowShark.root)}
+  $("q").textContent="";$("qsub").textContent="";repeatLine="Dive! Make the word to open the lock.";say(repeatLine);sfx.glug();
+  later(()=>{if(D)setWord()},2300,"dive");
+}
+function locks(){$("qsub").textContent=D.words.map((_,i)=>i<D.wi?"🔓":"🔒").join(" ")}
+function setWord(){
+  const w=D.word=D.words[D.wi],L=w.length;D.miss=0;D.missedWord=false;
+  let nb=S.wordLvl===1?1:S.wordLvl===2?Math.min(2,L):L;
+  const idx=shuffle([...Array(L).keys()]).slice(0,nb).sort((a,b)=>a-b);
+  D.slots=[...w].map((ch,i)=>idx.includes(i)?null:ch);
+  const need=idx.map(i=>w[i]);const total=S.wordLvl===1?(S.wrun>=2?3:2):S.wordLvl===2?4:5;
+  const pool=shuffle(LETTERS().filter(c=>!need.includes(c)));const vow=pool.filter(c=>"aeiou".includes(c));
+  const extra=[];if(need.some(c=>"aeiou".includes(c))&&vow.length)extra.push(vow[0]);
+  for(const c of pool){if(need.length+extra.length>=Math.max(total,need.length+1))break;if(!extra.includes(c))extra.push(c)}
+  D.bubbles.forEach(b=>killObj(b.s));D.bubbles=[];
+  const {hw,hh}=seaBounds(),chars=shuffle(need.concat(extra)),n=chars.length;
+  const rowsN=hw>hh?1:2,cols=Math.ceil(n/rowsN);
+  chars.forEach((ch,i)=>{const s=sprite(ch,{bubble:true},1.9),col=i%cols,rowi=Math.floor(i/cols);
+    const sx=Math.max(1,hw-1.25),x=cols>1?-sx+col/(cols-1)*sx*2:rnd(-.6,.6),y=(rowsN===1?-hh*.15:(rowi?-hh*.52:hh*.08))+rnd(-.35,.35);
+    s.position.set(x,y,0);sea.add(s);D.bubbles.push({s,ch,x,y,ph:rnd(0,6),alive:true})});
+  drawSlots();locks();repeatLine=`Make the word: ${w}.`;say(repeatLine,.75);D.busy=.4;
+}
+function drawSlots(popI){const first=D.slots.indexOf(null);
+  $("q").innerHTML=D.slots.map((c,i)=>`<span class="slot ${c?"":"empty"} ${i===first?"now":""} ${i===popI?"pop":""}">${c||"m"}</span>`).join("")}
+function grab(b){
+  const first=D.slots.indexOf(null);if(first<0)return;const needCh=D.word[first];
+  const later=D.slots.some((c,i)=>c===null&&i!==first&&D.word[i]===b.ch);
+  if(b.ch===needCh){b.alive=false;killObj(b.s);sfx.pop();burst(sub.root.position,0x9fe7ff,8,true);D.slots[first]=b.ch;drawSlots(first);
+    if(D.slots.indexOf(null)<0){wordDone()}else say(D.word,.75)}
+  else if(later){sfx.pop();b.x+=rnd(-1,1);b.y+=1;say("Not yet. Start at the front. "+D.word,.8)}
+  else{b.alive=false;killObj(b.s);sfx.nope();burst(sub.root.position,0x5577aa,6,true);D.miss++;D.missedWord=true;say("Not that one. "+D.word+".",.75)}
+}
+function wordDone(){
+  const w=D.word;note("w",w,!D.missedWord);
+  if(D.missedWord){S.wrun=Math.min(0,S.wrun)-1;if(S.wrun<=-3&&S.wordLvl>1){S.wordLvl--;S.wrun=0}}
+  else{S.wrun=Math.max(0,S.wrun)+1;if(S.wrun>=4&&S.wordLvl<3){S.wordLvl++;S.wrun=0}}save();
+  sfx.yay();say(`${w}! ${pick(["You made it!","Awesome!","Ka pai!"])}`,.8);D.wi++;locks();D.busy=1.8;
+  D.bubbles.forEach(b=>{if(b.alive){b.alive=false;killObj(b.s)}});
+  later(()=>{if(!D)return;if(D.wi>=D.words.length)startReveal();else setWord()},1700,"dive");
+}
+function updateDive(dt){
+  const {hw,hh}=seaBounds();
+  D.x+=(D.tx-D.x)*Math.min(1,dt*3.2);D.y+=(D.ty-D.y)*Math.min(1,dt*3.2);
+  const dx=D.tx-D.x;if(Math.abs(dx)>.15)sub.dir=dx>0?1:-1;
+  sub.root.position.set(D.x,D.y+Math.sin(T*2)*.08,0);sub.g.rotation.y+=((sub.dir>0?0:Math.PI)-sub.g.rotation.y)*Math.min(1,dt*8);sub.prop.rotation.x+=dt*14;
+  subLight.position.set(D.x+sub.dir*1.5,D.y,2);
+  const base=[.9,.9,.6,.45][S.scary];
+  for(const b of D.bubbles){if(!b.alive)continue;b.s.position.set(b.x+Math.sin(T*.7+b.ph)*.18,b.y+Math.sin(T*1.1+b.ph)*.22,0);
+    const d=Math.hypot(b.s.position.x-D.x,b.s.position.y-D.y);const need=D.word[D.slots.indexOf(null)];
+    b.s.material.opacity=d<4.6?1:base;const hint=D.miss>=2&&b.ch===need;b.s.scale.setScalar(hint?1.9+Math.sin(T*6)*.25:1.9)}
+  if(D.busy>0)D.busy-=dt;
+  else if(D.aim&&D.aim.alive){D.tx=D.aim.s.position.x-sub.dir*.2;D.ty=D.aim.s.position.y;if(Math.hypot(D.aim.s.position.x-D.x,D.aim.s.position.y-D.y)<.95){const b=D.aim;D.aim=null;grab(b)}}
+  ambientSea(dt);
+}
+function ambientSea(dt){
+  const p=snow.geometry.attributes.position;for(let i=0;i<p.count;i++){let y=p.getY(i)-dt*.3;if(y<-9)y=9;p.setY(i,y)}p.needsUpdate=true;
+  for(const k of scenery)if(k.userData.kelp)k.rotation.z=Math.sin(T*.8+k.userData.sway)*.12;
+  cageEyes.scale.y=(Math.sin(T*.9)>.95)?.1:1;cageEyes.position.x=Math.sin(T*.25)*5;
+  if(shadowShark){const s=shadowShark;s.root.position.x+=dt*(S.scary>2?5:3);if(s.root.position.x>44){s.root.position.x=-44-rnd(0,30);s.root.position.y=rnd(-2,4)}swim(s,T,2)}
+}
+
+// ---------- the rescue ----------
+let V=null;
+function startReveal(){
+  mode="reveal";hud(false);sub.root.visible=false;cageEyes.visible=false;D.bubbles.forEach(b=>killObj(b.s));
+  if(V&&V.sh)sea.remove(V.sh.root);
+  const sh=buildShark(N.key);sea.add(sh.root);sh.eyes.forEach(e=>e.visible=true);sh.root.position.set(0,0,-30);sh.yaw.rotation.y=-Math.PI/2;
+  V={sh,t:0,said:false,done:false,viewer:false};seaAmb.intensity=.3;showL.intensity=0;say("The cage is open! Something is coming...");sfx.pop();
+}
+function updateReveal(dt){
+  const sh=V.sh,t=V.t+=dt;swim(sh,T,V.viewer?4:6);
+  if(!V.viewer&&t<3){const u=t/3;sh.root.position.set(Math.sin(t*2)*.6*(1-u),0,-30+ (S.scary>2?Math.pow(u,3):u*u)*33.5);sh.yaw.rotation.y=-Math.PI/2;
+    if(sh.jaw)sh.jaw.rotation.z=.04-u*.5;
+    if(t>2.3&&!V.said){V.said=true;if(S.scary>2){sfx.growl()}else if(S.scary>1){tone("sawtooth",90,60,.5,.12)}else sfx.pop()}}
+  else{
+    if(!V.done&&!V.viewer){V.done=true;seaAmb.intensity=1;showL.intensity=1.1;sh.eyes.forEach(e=>e.visible=false);burst(new THREE.Vector3(0,0,2),0x9fe7ff,22,true);sfx.fanfare();
+      const line=`Thank you, ${rangerName()}! I am a ${N.sp.name}. ${N.sp.fact}`;say(line);
+      show(`<h2>${N.sp.name}</h2><p>${N.sp.fact}</p><button class="big go" id="nx">▶</button>`,false,true);
+      $("nx").onclick=reward}
+    const a=(V.viewer?t:t-3)*.7+(V.viewer?0:Math.PI/2),r=V.viewer?3.4:3.6;
+    sh.root.position.set(Math.cos(a)*r,Math.sin(a*2)*.5+2,Math.sin(a)*r-1.5);sh.yaw.rotation.y=-a-Math.PI/2;
+    if(sh.jaw)sh.jaw.rotation.z=.04-Math.max(0,Math.sin(t*3))*.25;
+  }
+  ambientSea(dt);
+}
+function reward(){
+  hush();const first=!S.rescued.includes(N.key);
+  if(first)S.rescued.push(N.key);
+  if(!N.practice){S.nights++;S.lastDay=today()}
+  const free=PARTS.filter(p=>!S.parts.includes(p.id)),plain=free.filter(p=>p.id!=="gold"),gold=free.find(p=>p.id==="gold");
+  const part=N.practice?null:(N.sp.boss&&gold)?gold:(plain[0]||gold||null);
+  save();
+  const next=offered();const tease=next.length?`Tomorrow night: something is waiting at ${SPECIES[next[next.length>1?ri(0,1):0]].place}...`:"You saved every shark on the island! More calls will come.";
+  if(!part){return afterCrate(tease)}
+  show(`<h2>${first?"New in your Shark Book!":"Well done!"}</h2><p>Tap the mystery crate!</p><button class="crate" id="cr">📦</button>`);
+  say((first?"A new shark for your Shark Book! ":"")+"Tap the mystery crate!");
+  $("cr").onclick=()=>{S.parts.push(part.id);save();applyParts();sfx.fanfare();
+    show(`<h2>New truck part!</h2><div class="crate open">${part.emo}</div><h2 style="color:#fff">${part.name}</h2><button class="big go" id="nx">▶</button>`);
+    say(`${part.name} for your monster truck!`);$("nx").onclick=()=>afterCrate(tease)};
+}
+function afterCrate(tease){
+  show(`<h2>Mission done!</h2><p>${N.practice?"Great driving, Ranger!":tease}</p><button class="big go" id="fr">🚙 Free drive!</button><button class="btn" id="hm">🏠 Home</button>`);
+  say((N.practice?"Great driving! ":tease+" ")+"Now it is free drive time!");
+  $("fr").onclick=()=>fade(()=>startRun({free:true,secs:100,onDone:()=>fade(()=>{home();say("See you tomorrow night, "+rangerName()+"!")})}));
+  $("hm").onclick=()=>fade(home);
+}
+
+// ---------- garage and shark book ----------
+function garage(){
+  mode="garage";world="beach";clearRun();applyParts();
+  const draw=()=>{show(`<h2>${S.truck?S.truck:"My monster truck"}</h2>
+    <div class="row">${PARTS.map(p=>S.parts.includes(p.id)?`<button class="btn sm ${S.off[p.id]?"":"on"}" data-p="${p.id}">${p.emo} ${p.name}</button>`:`<button class="btn sm" disabled style="opacity:.4">🔒</button>`).join("")}</div>
+    <button class="btn" id="hm">🏠 Home</button>`,false,true);
+    document.querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{const id=b.dataset.p;S.off[id]=!S.off[id];save();applyParts();sfx.pop();draw()});
+    $("hm").onclick=home};
+  draw();say(S.parts.length?"Your garage. Tap a part to put it on or take it off.":"Your garage. Save a shark to win truck parts!");
+}
+function book(){
+  mode="idle";hush();
+  show(`<h2>Shark Book</h2><div class="cards">${ORDER.map(k=>S.rescued.includes(k)?`<button class="card" data-k="${k}"><span class="emo">🦈</span><span>${SPECIES[k].name}</span></button>`:`<div class="card locked"><span class="emo">❓</span><span>???</span></div>`).join("")}</div><button class="btn" id="hm">🏠 Home</button>`);
+  $("hm").onclick=home;
+  document.querySelectorAll("button.card").forEach(c=>c.onclick=()=>{const k=c.dataset.k,sp=SPECIES[k];world="sea";mode="reveal";sub.root.visible=false;cageEyes.visible=false;
+    if(V&&V.sh)sea.remove(V.sh.root);if(shadowShark){sea.remove(shadowShark.root);shadowShark=null}
+    const sh=buildShark(k);sea.add(sh.root);V={sh,t:0,viewer:true,done:true};seaAmb.intensity=1.2;
+    show(`<h2>${sp.name}</h2><p>${sp.fact}</p><button class="btn" id="bk">◀ Shark Book</button>`,false,true);showL.intensity=1;
+    say(`${sp.name}. ${sp.fact}`);$("bk").onclick=()=>{world="beach";book()}});
+}
+
+// ---------- grown-ups ----------
+function grownUps(){
+  mode="idle";hush();
+  const worst=(o,n)=>Object.entries(o).filter(e=>e[1].miss>0).sort((a,b)=>b[1].miss-a[1].miss).slice(0,n).map(e=>`${e[0]} (${e[1].miss} of ${e[1].miss+e[1].ok})`).join(", ")||"nothing yet";
+  const names={missing:"missing number",start:"counting on from a number",find:"finding a number by name",plus:"+0 and +1",skip2:"counting by 2s",skip5:"counting by 5s",map:"map squares"};
+  const nstat={};Object.entries(S.stat.n).forEach(([k,v])=>nstat[names[k]||k]=v);
+  show(`<div class="panel gp">
+   <h2>Grown-ups</h2>
+   <h3>How it is going</h3>
+   <p class="note" style="opacity:1">Nights played: ${S.nights}. Sharks saved: ${S.rescued.length} of ${ORDER.length}.<br>Word level ${S.wordLvl} of 3 (1 = one letter missing, 2 = two letters, 3 = builds the whole word). Number level ${S.numLvl} of 3 (up to ${numMax()}).<br>
+   Words missed most: ${worst(S.stat.w,6)}.<br>Number skills missed most: ${worst(nstat,4)}.</p>
+   <h3>Settings</h3>
+   <label>How scary?<span class="row" style="justify-content:flex-start">${[1,2,3].map(i=>`<button class="btn sm ${S.scary===i?"on":""}" data-s="${i}">${["Spooky","Scary","Super scary"][i-1]}</button>`).join("")}</span></label>
+   <label><span><input type="checkbox" id="daily" ${S.daily?"checked":""}> One new night per day (old nights can still be replayed)</span></label>
+   <label>Ranger name (said out loud)<input type="text" id="rn" maxlength="14" value="${S.ranger.replace(/"/g,"")}"></label>
+   <label>Truck name<input type="text" id="tn" maxlength="18" value="${S.truck.replace(/"/g,"")}"></label>
+   <label>Words to build. Add words as school adds new sounds. The letter choices come from these words.<textarea id="wl">${WORDS().join(", ")}</textarea></label>
+   <label>Voice<select id="vsel"></select></label>
+   <div class="row" style="justify-content:flex-start"><button class="btn sm" id="vt">🔊 Test voice</button><button class="btn sm" id="wr">Reset words</button><button class="btn sm" id="rs">Reset all progress</button></div>
+   <button class="big go" id="ok">Save</button></div>`);
+  fillVoices();
+  const vs=$("vsel");vs.onchange=()=>{const v=voices[+vs.value];if(v){voice=v;try{localStorage.setItem("voiceKey",vkey(v))}catch(e){}}};
+  $("vt").onclick=()=>say("Kia ora, Ranger! Make the word: cat.");
+  document.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{S.scary=+b.dataset.s;document.querySelectorAll("[data-s]").forEach(x=>x.classList.toggle("on",x===b))});
+  $("wr").onclick=()=>{$("wl").value=START_WORDS.join(", ")};
+  let armed=false;$("rs").onclick=()=>{if(!armed){armed=true;$("rs").textContent="Tap again to erase everything";return}
+    const keep={scary:S.scary,daily:S.daily,ranger:S.ranger,truck:S.truck,words:S.words};S={ranger:"",truck:"",rescued:[],nights:0,lastDay:"",parts:[],off:{},scary:2,daily:true,wordLvl:1,numLvl:1,wrun:0,nrun:0,stat:{w:{},n:{}},words:null,lastSurprise:""};Object.assign(S,keep);save();home()};
+  $("ok").onclick=()=>{S.daily=$("daily").checked;S.ranger=$("rn").value.trim().replace(/[<>&"]/g,"");S.truck=$("tn").value.trim().replace(/[<>&"]/g,"");
+    const w=cleanWords($("wl").value);S.words=(w.length>=4&&w.join()!==START_WORDS.join())?w:null;save();home()};
+}
+
+// ---------- input ----------
+const cv=$("cv"),ray=THREE_OK?new THREE.Raycaster():null,ptr=THREE_OK?new THREE.Vector2():null;
+function seaPoint(e){ptr.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1);ray.setFromCamera(ptr,camS);const o=ray.ray.origin,d=ray.ray.direction,t=-o.z/d.z;return {x:o.x+d.x*t,y:o.y+d.y*t}}
+function diveTouch(e,down){if(!D||mode!=="dive")return;const p=seaPoint(e),{hw,hh}=seaBounds();
+  D.tx=clamp(p.x,-hw+.8,hw-.8);D.ty=clamp(p.y,-hh+.8,hh-1.6);
+  if(down){let best=null,bd=1.5;for(const b of D.bubbles){if(!b.alive)continue;const d=Math.hypot(b.s.position.x-p.x,b.s.position.y-p.y);if(d<bd){bd=d;best=b}}D.aim=best}}
+let dragging=false;
+cv.addEventListener("pointerdown",e=>{if(mode==="run")setLane(Math.min(2,Math.floor(e.clientX/innerWidth*3)));else if(mode==="dive"){dragging=true;diveTouch(e,true)}});
+cv.addEventListener("pointermove",e=>{if(dragging&&mode==="dive"&&D&&!D.aim)diveTouch(e,false)});
+["pointerup","pointercancel","pointerleave"].forEach(ev=>cv.addEventListener(ev,()=>dragging=false));
+addEventListener("keydown",e=>{if(mode!=="run"||!R)return;
+  if(e.key==="ArrowLeft"||e.key==="a")setLane(R.lane-1);else if(e.key==="ArrowRight"||e.key==="d")setLane(R.lane+1);
+  else if(e.key==="ArrowUp"||e.key===" "){R.boost=true}else if("123".includes(e.key))setLane(+e.key-1)});
+document.addEventListener("gesturestart",e=>e.preventDefault());
+document.addEventListener("visibilitychange",()=>{if(document.hidden)hush()});
+
+// ---------- main loop ----------
+let last=0;
+function frame(ms){
+  requestAnimationFrame(frame);const dt=Math.min(.05,(ms-last)/1000||0);last=ms;T+=dt;
+  if(mode==="run"&&R)updateRun(dt);
+  else if(mode==="dive"&&D)updateDive(dt);
+  else if(mode==="reveal"&&V)updateReveal(dt);
+  else if(mode==="home"||mode==="garage"){const gz=mode==="garage",d=gz?(camB.aspect>1?7:9.5):8.5,a=T*.25;camB.position.set(Math.sin(a)*d,gz?3.6:3.2,-Math.cos(a)*d);camB.lookAt(0,gz?(camB.aspect>1?0:-1.6):1.2,0);
+    for(const g of scenery)if(g.userData.eyes){g.userData.eyes.visible=S.scary>1;g.userData.eyes.scale.y=(Math.sin(T*1.3+g.position.x)>.93)?.1:1}}
+  for(const b of bursts){if(b.userData.life<=0)continue;b.userData.life-=dt;b.position.addScaledVector(b.userData.v,dt);b.userData.v.y+=(b.userData.sea?1.5:-12)*dt;if(b.userData.life<=0)b.visible=false}
+  renderer.render(world==="sea"?sea:beach,world==="sea"?camS:camB);
+}
+if(renderer){initWorlds();home();requestAnimationFrame(frame);try{document.fonts.load('700 40px Andika')}catch(e){}}
+if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+</body>
+</html>
